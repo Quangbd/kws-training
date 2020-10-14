@@ -133,7 +133,7 @@ def test_pb():
 
 def test_tflite():
     interpreter = tf.lite.Interpreter(
-        model_path='/Users/quangbd/Documents/data/model/kws/speech_commands_v0.02/cnn/cnn3.tflite')
+        model_path='/Users/quangbd/Documents/data/model/kws/speech_commands_v0.02/ds_cnn/ds_cnn3.tflite')
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
     print(input_details)

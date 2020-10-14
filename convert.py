@@ -72,13 +72,13 @@ def checkpoint2pb():
 
 def pb2tflite():
     converter = tf.compat.v1.lite.TFLiteConverter.from_frozen_graph(
-        '/Users/quangbd/Documents/data/model/kws/speech_commands_v0.02/cnn/cnn3.pb',
+        '/Users/quangbd/Documents/data/model/kws/speech_commands_v0.02/lstm/lstm3.pb',
         input_arrays=['decoded_sample_data'],
         output_arrays=['labels_softmax'])
     converter.allow_custom_ops = True
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     tflite_model = converter.convert()
-    with open('/Users/quangbd/Documents/data/model/kws/speech_commands_v0.02/cnn/cnn3.tflite', 'wb') as f:
+    with open('/Users/quangbd/Documents/data/model/kws/speech_commands_v0.02/lstm/lstm3.tflite', 'wb') as f:
         f.write(tflite_model)
 
 

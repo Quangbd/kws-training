@@ -77,20 +77,20 @@ def prepare_config():
                         help='Words to use (others will be added to an unknown label).', )
     parser.add_argument('--model_architecture',
                         type=str,
-                        default='cnn',
+                        default='ds_cnn',
                         help='What model architecture to use')
     parser.add_argument('--model_size_info',
                         type=int,
                         nargs="+",
-                        default=[60, 10, 4, 1, 1, 76, 10, 4, 2, 1, 58, 128],
+                        default=[6, 276, 10, 4, 2, 1, 276, 3, 3, 2, 2, 276, 3, 3, 1, 1, 276, 3, 3, 1, 1, 276, 3, 3, 1, 1, 276, 3, 3, 1, 1],
                         help='Model dimensions - different for various models.')
     parser.add_argument('--checkpoint',
                         type=str,
                         default='/Users/quangbd/Documents/data/model/kws/speech_commands_v0.02/'
-                                'cnn/cnn3/training/best/cnn_9282.ckpt-22000',
+                                'ds_cnn/ds_cnn3/training/best/ds_cnn_9457.ckpt-23200',
                         help='Checkpoint to load the weights from.')
     parser.add_argument('--output_file',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/speech_commands_v0.02/cnn/cnn3.pb',
+                        default='/Users/quangbd/Documents/data/model/kws/speech_commands_v0.02/ds_cnn/ds_cnn3.pb',
                         help='Where to save the frozen graph.')
     return parser.parse_args()
