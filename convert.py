@@ -1,6 +1,4 @@
-import random
 from utils import *
-from config import *
 import tensorflow as tf
 from models import select_model
 from tensorflow.python.framework import graph_util
