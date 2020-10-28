@@ -160,5 +160,5 @@ def main(_):
 
 
 if __name__ == '__main__':
-    args = prepare_config()
+    args = prepare_train_config()
     tf.compat.v1.app.run(main=main)

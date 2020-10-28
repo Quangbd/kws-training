@@ -29,11 +29,11 @@ def which_set(filename, validation_percentage, testing_percentage):
     return result
 
 
-def prepare_config():
+def prepare_train_config():
     parser = argparse.ArgumentParser(description='set input arguments')
     parser.add_argument('--data_dir',
                         type=str,
-                        default='/Users/quangbd/Documents/data/kws-data/speech_commands_v0.02/',
+                        default='/Users/quangbd/Documents/data/kws-vinai/clean/',
                         help='Where to download the speech training data to.')
     parser.add_argument('--window_size_ms',
                         type=float,
@@ -73,7 +73,7 @@ def prepare_config():
                         help='Directory to write event logs and checkpoint.')
     parser.add_argument('--wanted_words',
                         type=str,
-                        default='yes,no,up,down,left,right,on,off,stop,go',
+                        default='quang',
                         help='Words to use (others will be added to an unknown label).', )
     parser.add_argument('--model_architecture',
                         type=str,
@@ -82,15 +82,37 @@ def prepare_config():
     parser.add_argument('--model_size_info',
                         type=int,
                         nargs="+",
-                        default=[6, 276, 10, 4, 2, 1, 276, 3, 3, 2, 2, 276, 3, 3, 1, 1, 276, 3, 3, 1, 1, 276, 3, 3, 1, 1, 276, 3, 3, 1, 1],
+                        default=[6, 276, 10, 4, 2, 1, 276, 3, 3, 2, 2, 276, 3, 3, 1, 1,
+                                 276, 3, 3, 1, 1, 276, 3, 3, 1, 1, 276, 3, 3, 1, 1],
                         help='Model dimensions - different for various models.')
     parser.add_argument('--checkpoint',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/speech_commands_v0.02/'
-                                'ds_cnn/ds_cnn3/training/best/ds_cnn_9457.ckpt-23200',
+                        default='/Users/quangbd/Documents/data/model/kws/quang/ds_cnn/ds_cnn3/'
+                                'training/best/ds_cnn_9715.ckpt-11200',
                         help='Checkpoint to load the weights from.')
     parser.add_argument('--output_file',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/speech_commands_v0.02/ds_cnn/ds_cnn3.pb',
+                        default='/Users/quangbd/Documents/data/model/kws/quang/ds_cnn/ds_cnn3.pb',
                         help='Where to save the frozen graph.')
+    return parser.parse_args()
+
+
+def prepare_record_config():
+    parser = argparse.ArgumentParser(description='set input arguments')
+    parser.add_argument('--model_path',
+                        type=str,
+                        default='/Users/quangbd/Documents/data/model/kws/quang/ds_cnn/ds_cnn3.tflite',
+                        help='Tflite model path')
+    parser.add_argument('--wanted_words',
+                        type=str,
+                        default='quang',
+                        help='Words to use (others will be added to an unknown label).')
+    parser.add_argument('--chunk_size',
+                        type=int,
+                        default=1024,
+                        help='Chunk size')
+    parser.add_argument('--record_time',
+                        type=int,
+                        default=20,
+                        help='Record time in seconds')
     return parser.parse_args()
