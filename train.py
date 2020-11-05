@@ -2,6 +2,7 @@ import random
 import numpy as np
 from utils import *
 from config import *
+from tqdm import tqdm
 import tensorflow as tf
 from data import AudioLoader
 from models import select_model
@@ -22,7 +23,7 @@ def main(_):
     print('-----\nModel settings: {}'.format(model_settings))
 
     # data
-    audio_loader = AudioLoader(args.data_dir, wanted_words, SILENCE_PERCENTAGE, UNKNOWN_PERCENTAGE,
+    audio_loader = AudioLoader(args.data_dir, wanted_words, SILENCE_PERCENTAGE, VOCAL_PERCENTAGE, NEGATIVE_PERCENTAGE,
                                VALIDATION_PERCENTAGE, TESTING_PERCENTAGE, model_settings)
 
     fingerprint_size = model_settings['fingerprint_size']
@@ -101,7 +102,7 @@ def main(_):
             total_accuracy = 0
             val_size = audio_loader.size('validation')
             total_conf_matrix = None
-            for i in range(0, val_size, args.batch_size):
+            for i in tqdm(range(0, val_size, args.batch_size)):
                 val_fingerprints, val_ground_truth = audio_loader \
                     .load_batch(sess, args.batch_size, offset=i, background_frequency=0,
                                 background_volume_range=0, time_shift=0, mode='validation')
@@ -122,7 +123,7 @@ def main(_):
             tf.compat.v1.logging.info('Step {}: val accuracy {}'.format(step, total_accuracy))
 
             # Save the model checkpoint when validation accuracy improves
-            if total_accuracy > best_accuracy:
+            if total_accuracy >= best_accuracy:
                 best_accuracy = total_accuracy
                 checkpoint_path = os.path.join(
                     args.train_dir, 'best',
@@ -132,11 +133,12 @@ def main(_):
             tf.compat.v1.logging.info('So far the best validation accuracy is %.2f%%' % (best_accuracy * 100))
 
     # test
+    print('Testing')
     test_size = audio_loader.size(mode='testing')
     tf.compat.v1.logging.info('set_size=%d', test_size)
     total_accuracy = 0
     total_conf_matrix = None
-    for i in range(0, test_size, args.batch_size):
+    for i in tqdm(range(0, test_size, args.batch_size)):
         test_fingerprints, test_ground_truth = audio_loader \
             .load_batch(sess, args.batch_size, offset=i, background_frequency=0,
                         background_volume_range=0, time_shift=0, mode='testing')
@@ -160,5 +162,5 @@ def main(_):
 
 
 if __name__ == '__main__':
-    args = prepare_train_config()
+    args = prepare_normal_config()
     tf.compat.v1.app.run(main=main)

@@ -57,29 +57,30 @@ def checkpoint2pb():
         frozen_graph_def = graph_util.convert_variables_to_constants(
             sess, sess.graph_def, ['labels_softmax'])
         tf.compat.v1.train.write_graph(frozen_graph_def,
-                                       os.path.dirname(args.output_file),
-                                       os.path.basename(args.output_file),
+                                       os.path.dirname(args.pb),
+                                       os.path.basename(args.pb),
                                        as_text=False)
-        tf.compat.v1.logging.info('Saved frozen graph to %s', args.output_file)
+        tf.compat.v1.logging.info('Saved frozen graph to %s', args.pb)
 
         sess.close()
 
-    args = prepare_train_config()
+    args = prepare_normal_config()
     tf.compat.v1.app.run(main=_process)
 
 
 def pb2tflite():
+    args = prepare_normal_config()
     converter = tf.compat.v1.lite.TFLiteConverter.from_frozen_graph(
-        '/Users/quangbd/Documents/data/model/kws/quang/ds_cnn/ds_cnn3.pb',
+        args.pb,
         input_arrays=['decoded_sample_data'],
         output_arrays=['labels_softmax'])
     converter.allow_custom_ops = True
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     tflite_model = converter.convert()
-    with open('/Users/quangbd/Documents/data/model/kws/quang/ds_cnn/ds_cnn3.tflite', 'wb') as f:
+    with open(args.tflite, 'wb') as f:
         f.write(tflite_model)
 
 
 if __name__ == '__main__':
-    pb2tflite()
     # checkpoint2pb()
+    pb2tflite()

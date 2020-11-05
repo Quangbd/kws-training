@@ -4,6 +4,7 @@ import numpy as np
 from utils import *
 from config import *
 import tensorflow as tf
+from scipy.io.wavfile import write
 
 
 def main():
@@ -26,11 +27,11 @@ def main():
     print('Recording')
     total_sample = SAMPLE_RATE * 1  # 1 second
     audio = np.zeros([total_sample])
+    write_time = time.time()
     for i in range(0, int(SAMPLE_RATE / chunk * args.record_time)):
         data = stream.read(chunk)
         sub_audio = np.frombuffer(data, dtype=np.int16) / 32768.
         sub_audio_len = sub_audio.shape[0]
-        print(sub_audio_len)
         audio[:total_sample - sub_audio_len] = audio[sub_audio_len:]
         audio[total_sample - sub_audio_len:] = sub_audio
 
@@ -42,6 +43,9 @@ def main():
         output_data = interpreter.get_tensor(output_details[0]['index'])[0]
         re_index = int(np.argmax(output_data))
         re_score = output_data[re_index]
+        if re_index == 2 and re_score > 0.9 and (time.time() - write_time) > 3:
+            write('/Users/quangbd/Downloads/silence_custom/{}_0.wav'.format(int(time.time())), SAMPLE_RATE, input_data)
+            write_time = time.time()
         print('Result: {} {} - Latency {}'.format(labels[re_index], re_score, (time.time() - start) * 1000))
 
     print('Done recording')

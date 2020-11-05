@@ -7,7 +7,7 @@ from tensorflow.python.util import compat
 
 
 def prepare_words_list(wanted_words):
-    return [SILENCE_LABEL, UNKNOWN_WORD_LABEL] + wanted_words
+    return [SILENCE_LABEL, VOCAL_WORD_LABEL, NEGATIVE_WORD_LABEL] + wanted_words
 
 
 def which_set(filename, validation_percentage, testing_percentage):
@@ -29,11 +29,11 @@ def which_set(filename, validation_percentage, testing_percentage):
     return result
 
 
-def prepare_train_config():
+def prepare_normal_config():
     parser = argparse.ArgumentParser(description='set input arguments')
     parser.add_argument('--data_dir',
                         type=str,
-                        default='/Users/quangbd/Documents/data/kws-vinai/clean/',
+                        default='/Users/quangbd/Documents/data/kws-data/viet_nam_20201103/',
                         help='Where to download the speech training data to.')
     parser.add_argument('--window_size_ms',
                         type=float,
@@ -73,7 +73,7 @@ def prepare_train_config():
                         help='Directory to write event logs and checkpoint.')
     parser.add_argument('--wanted_words',
                         type=str,
-                        default='quang',
+                        default='viet_nam',
                         help='Words to use (others will be added to an unknown label).', )
     parser.add_argument('--model_architecture',
                         type=str,
@@ -87,12 +87,16 @@ def prepare_train_config():
                         help='Model dimensions - different for various models.')
     parser.add_argument('--checkpoint',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/quang/ds_cnn/ds_cnn3/'
-                                'training/best/ds_cnn_9715.ckpt-11200',
+                        default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3/'
+                                'training/best/ds_cnn_9923.ckpt-14000',
                         help='Checkpoint to load the weights from.')
-    parser.add_argument('--output_file',
+    parser.add_argument('--pb',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/quang/ds_cnn/ds_cnn3.pb',
+                        default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3.pb',
+                        help='Where to save the frozen graph.')
+    parser.add_argument('--tflite',
+                        type=str,
+                        default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3.tflite',
                         help='Where to save the frozen graph.')
     return parser.parse_args()
 
@@ -101,11 +105,11 @@ def prepare_record_config():
     parser = argparse.ArgumentParser(description='set input arguments')
     parser.add_argument('--model_path',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/quang/ds_cnn/ds_cnn3.tflite',
+                        default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3.tflite',
                         help='Tflite model path')
     parser.add_argument('--wanted_words',
                         type=str,
-                        default='quang',
+                        default='viet_nam,viet,nam',
                         help='Words to use (others will be added to an unknown label).')
     parser.add_argument('--chunk_size',
                         type=int,
@@ -113,6 +117,6 @@ def prepare_record_config():
                         help='Chunk size')
     parser.add_argument('--record_time',
                         type=int,
-                        default=20,
+                        default=60,
                         help='Record time in seconds')
     return parser.parse_args()

@@ -64,7 +64,7 @@ def test_batch():
         tf.compat.v1.logging.info('Final accuracy {}'.format(total_accuracy))
         sess.close()
 
-    args = prepare_train_config()
+    args = prepare_normal_config()
     tf.compat.v1.app.run(main=_process)
 
 
@@ -108,7 +108,7 @@ def test_checkpoint():
         print('Result: {} {}'.format(labels[predicted_indices[0]], predicted_results[0][predicted_indices[0]]))
         sess.close()
 
-    args = prepare_train_config()
+    args = prepare_normal_config()
     tf.compat.v1.app.run(main=_process)
 
 
@@ -117,7 +117,7 @@ def test_pb():
                              sr=16000, duration=1)
     audio = np.reshape(audio, [16000, 1])
 
-    args = prepare_train_config()
+    args = prepare_normal_config()
     with tf.compat.v1.gfile.FastGFile(args.output_file, 'rb') as f:
         graph_def = tf.compat.v1.GraphDef()
     graph_def.ParseFromString(f.read())
@@ -132,29 +132,43 @@ def test_pb():
 
 def test_tflite():
     interpreter = tf.lite.Interpreter(
-        model_path='/Users/quangbd/Documents/data/model/kws/quang/ds_cnn/ds_cnn3.tflite')
+        model_path='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3.tflite')
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
     print(input_details)
     print(output_details)
     interpreter.allocate_tensors()
 
-    start = time.time()
-    audio, sr = librosa.load('/Users/quangbd/Documents/data/kws-vinai/clean/quang/09204_0.wav',
-                             sr=16000, duration=1)
-    audio = np.reshape(audio, [16000, 1])
-    input_data = np.array(audio, dtype=np.float32)
-    interpreter.set_tensor(input_details[0]['index'], input_data)
+    from glob import glob
+    import shutil
+    from tqdm import tqdm
 
-    interpreter.invoke()
+    for file in tqdm(glob('/Users/quangbd/Documents/data/kws-data/viet_nam/keyword/*.wav')):
+        try:
+            # print(file)
+            start = time.time()
+            audio, sr = librosa.load(file, sr=16000, duration=1)
+            # print(audio)
+            audio = np.reshape(audio, [16000, 1])
+            input_data = np.array(audio, dtype=np.float32)
+            interpreter.set_tensor(input_details[0]['index'], input_data)
 
-    output_data = interpreter.get_tensor(output_details[0]['index'])[0]
-    print('Time: ', (time.time() - start) * 1000)
-    re_index = np.argmax(output_data)
+            interpreter.invoke()
 
-    args = prepare_train_config()
-    labels = prepare_words_list(args.wanted_words.split(','))
-    print('Result: {} {}'.format(labels[re_index], output_data[re_index]))
+            output_data = interpreter.get_tensor(output_details[0]['index'])[0]
+            # print(output_data)
+            # print('Time: ', (time.time() - start) * 1000)
+            re_index = np.argmax(output_data)
+
+            args = prepare_normal_config()
+            labels = prepare_words_list(args.wanted_words.split(','))
+            if output_data[re_index] <= 0.99:
+                shutil.move(file,
+                            os.path.join('/Users/quangbd/Documents/data/kws-data/viet_nam/noise', file.split('/')[-1]))
+                # print('Result: {} {}'.format(labels[re_index], output_data[re_index]))
+                # print('-------')
+        except:
+            pass
 
 
 if __name__ == '__main__':

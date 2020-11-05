@@ -8,11 +8,12 @@ import tensorflow as tf
 
 
 class AudioLoader:
-    def __init__(self, data_dir, wanted_words, silence_percentage, unknown_percentage,
+    def __init__(self, data_dir, wanted_words, silence_percentage, vocal_percentage, negative_percentage,
                  validation_percentage, testing_percentage, model_settings):
         self.data_dir = data_dir
         self.silence_percentage = silence_percentage
-        self.unknown_percentage = unknown_percentage
+        self.vocal_percentage = vocal_percentage
+        self.negative_percentage = negative_percentage
         self.wanted_words = wanted_words
         self.validation_percentage = validation_percentage
         self.testing_percentage = testing_percentage
@@ -30,8 +31,9 @@ class AudioLoader:
     def prepare_data_index(self):
         wanted_words_index = {}
         for index, wanted_word in enumerate(self.wanted_words):
-            wanted_words_index[wanted_word] = index + 2
-        unknown_index = {'validation': [], 'testing': [], 'training': []}
+            wanted_words_index[wanted_word] = index + 3
+        vocal_index = {'validation': [], 'testing': [], 'training': []}
+        negative_index = {'validation': [], 'testing': [], 'training': []}
         all_words = {}
 
         # Look through all the sub folders to find audio samples
@@ -45,8 +47,10 @@ class AudioLoader:
             set_index = utils.which_set(wav_path, self.validation_percentage, self.testing_percentage)
             if word in wanted_words_index:
                 self.data_index[set_index].append({'label': word, 'file': wav_path})
+            elif word == VOCAL_WORD_LABEL:
+                vocal_index[set_index].append({'label': word, 'file': wav_path})
             else:
-                unknown_index[set_index].append({'label': word, 'file': wav_path})
+                negative_index[set_index].append({'label': word, 'file': wav_path})
         if not all_words:
             raise Exception('No .wavs found at {}'.format(search_path))
         for index, wanted_word in enumerate(self.wanted_words):
@@ -63,22 +67,42 @@ class AudioLoader:
             for _ in range(silence_size):
                 self.data_index[set_index].append({'label': SILENCE_LABEL, 'file': silence_wav_path})
 
-            # Pick some unknowns to add to each partition of the data set.
-            random.shuffle(unknown_index[set_index])
-            unknown_size = int(math.ceil(set_size * self.unknown_percentage / 100))
-            self.data_index[set_index].extend(unknown_index[set_index][:unknown_size])
+            # Pick some vocal to add to each partition of the data set.
+            random.shuffle(vocal_index[set_index])
+            vocal_size = int(math.ceil(set_size * self.vocal_percentage / 100))
+            self.data_index[set_index].extend(vocal_index[set_index][:vocal_size])
 
-        # Make sure the ordering is random.
-        for set_index in ['validation', 'testing', 'training']:
-            random.shuffle(self.data_index[set_index])
+            # Pick some negative to add to each partition of the data set.
+            random.shuffle(negative_index[set_index])
+            negative_size = int(math.ceil(set_size * self.negative_percentage / 100))
+            self.data_index[set_index].extend(negative_index[set_index][:negative_size])
 
         # Prepare the rest of the result data structure.
         for word in all_words:
             if word in wanted_words_index:
                 self.word_to_index[word] = wanted_words_index[word]
+            elif word == VOCAL_WORD_LABEL:
+                self.word_to_index[word] = VOCAL_WORD_INDEX
             else:
-                self.word_to_index[word] = UNKNOWN_WORD_INDEX
+                self.word_to_index[word] = NEGATIVE_WORD_INDEX
             self.word_to_index[SILENCE_LABEL] = SILENCE_INDEX
+
+        # Make sure the ordering is random.
+        print('-----')
+        for set_index in ['validation', 'testing', 'training']:
+            random.shuffle(self.data_index[set_index])
+
+            # count label
+            count_label = {}
+            samples = self.data_index[set_index]
+            for sample in samples:
+                label = self.words_list[self.word_to_index[sample['label']]]
+                if label in count_label:
+                    count_label[label] += 1
+                else:
+                    count_label[label] = 1
+            print('Set index: ', set_index, ' - Count: ', sorted(count_label.items()))
+        print('-----')
 
     def prepare_background_data(self):
         background_dir = os.path.join(self.data_dir, BACKGROUND_NOISE_DIR_NAME)
