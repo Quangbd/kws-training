@@ -49,7 +49,7 @@ def prepare_normal_config():
                         help='How many bins to use for the MFCC fingerprint.')
     parser.add_argument('--training_steps',
                         type=str,
-                        default='10000,10000,10000',
+                        default='15000,25000,20000',
                         help='How many training loops to run.')
     parser.add_argument('--eval_step_interval',
                         type=int,
@@ -57,7 +57,7 @@ def prepare_normal_config():
                         help='How often to evaluate the training results.')
     parser.add_argument('--learning_rate',
                         type=str,
-                        default='0.0005,0.0001,0.00002',
+                        default='0.0001,0.00005,0.00001',
                         help='How large a learning rate to use when training.')
     parser.add_argument('--batch_size',
                         type=int,
@@ -88,7 +88,7 @@ def prepare_normal_config():
     parser.add_argument('--checkpoint',
                         type=str,
                         default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3/'
-                                'training/best/ds_cnn_9923.ckpt-14000',
+                                'training/best/ds_cnn_9934.ckpt-59000',
                         help='Checkpoint to load the weights from.')
     parser.add_argument('--pb',
                         type=str,
@@ -109,7 +109,7 @@ def prepare_record_config():
                         help='Tflite model path')
     parser.add_argument('--wanted_words',
                         type=str,
-                        default='viet_nam,viet,nam',
+                        default='viet_nam',
                         help='Words to use (others will be added to an unknown label).')
     parser.add_argument('--chunk_size',
                         type=int,
@@ -117,6 +117,6 @@ def prepare_record_config():
                         help='Chunk size')
     parser.add_argument('--record_time',
                         type=int,
-                        default=60,
+                        default=600,
                         help='Record time in seconds')
     return parser.parse_args()

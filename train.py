@@ -72,65 +72,76 @@ def main(_):
     tf.io.write_graph(sess.graph_def, args.train_dir, '{}.pbtxt'.format(args.model_architecture))
 
     # training loop
+    step = 0
+    epoch = 0
     best_accuracy = 0
     training_steps_max = np.sum(training_steps_list)
-    for step in range(1, training_steps_max + 1):
-        training_steps_sum = 0
-        learning_rate_value = 0
-        for i in range(len(training_steps_list)):
-            training_steps_sum += training_steps_list[i]
-            if step <= training_steps_sum:
-                learning_rate_value = learning_rates_list[i]
+    train_size = audio_loader.size('training')
+    while step < training_steps_max + 1:
+        epoch += 1
+        audio_loader.shuffle(set_index='training')
+        for offset in range(0, train_size, args.batch_size):
+            step += 1
+            if step >= training_steps_max + 1:
                 break
+            training_steps_sum = 0
+            learning_rate_value = 0
+            for i in range(len(training_steps_list)):
+                training_steps_sum += training_steps_list[i]
+                if step <= training_steps_sum:
+                    learning_rate_value = learning_rates_list[i]
+                    break
 
-        # train
-        train_fingerprints, train_ground_truth = audio_loader \
-            .load_batch(sess, args.batch_size, 0, BACKGROUND_FREQUENCY, BACKGROUND_VOLUME,
-                        time_shift_samples, mode='training')
-        train_summary, train_accuracy, cross_entropy_value, _, _ = sess.run(
-            [merged_summaries, evaluation_step, cross_entropy_mean, train_step, increment_global_step],
-            feed_dict={fingerprint_input: train_fingerprints,
-                       ground_truth_input: train_ground_truth,
-                       learning_rate_input: learning_rate_value,
-                       dropout_prob: 1.0})
-        train_writer.add_summary(train_summary, step)
-        tf.compat.v1.logging.info('Step {}: train accuracy {}, cross entropy {}, lr {}'.format(
-            step, train_accuracy * 100, cross_entropy_value, learning_rate_value))
+            # train
+            train_fingerprints, train_ground_truth = audio_loader \
+                .load_batch(sess, args.batch_size, offset,
+                            BACKGROUND_FREQUENCY, BACKGROUND_VOLUME,
+                            BACKGROUND_SILENCE_FREQUENCY, BACKGROUND_SILENCE_VOLUME,
+                            time_shift_samples, mode='training')
+            train_summary, train_accuracy, cross_entropy_value, _, _ = sess.run(
+                [merged_summaries, evaluation_step, cross_entropy_mean, train_step, increment_global_step],
+                feed_dict={fingerprint_input: train_fingerprints,
+                           ground_truth_input: train_ground_truth,
+                           learning_rate_input: learning_rate_value,
+                           dropout_prob: 1.0})
+            train_writer.add_summary(train_summary, step)
+            tf.compat.v1.logging.info('Epoch {} - Step {}: train accuracy {}, cross entropy {}, lr {}'.format(
+                epoch, step, train_accuracy * 100, cross_entropy_value, learning_rate_value))
 
-        # val
-        if step % args.eval_step_interval == 0:
-            total_accuracy = 0
-            val_size = audio_loader.size('validation')
-            total_conf_matrix = None
-            for i in tqdm(range(0, val_size, args.batch_size)):
-                val_fingerprints, val_ground_truth = audio_loader \
-                    .load_batch(sess, args.batch_size, offset=i, background_frequency=0,
-                                background_volume_range=0, time_shift=0, mode='validation')
-                val_summary, val_accuracy, val_matrix = sess.run(
-                    [merged_summaries, evaluation_step, confusion_matrix],
-                    feed_dict={
-                        fingerprint_input: val_fingerprints,
-                        ground_truth_input: val_ground_truth,
-                        dropout_prob: 1.0})
-                validation_writer.add_summary(val_summary, step)
-                batch_size = min(args.batch_size, val_size - i)
-                total_accuracy += (val_accuracy * batch_size) / val_size
-                if total_conf_matrix is None:
-                    total_conf_matrix = val_matrix
-                else:
-                    total_conf_matrix += val_matrix
-            tf.compat.v1.logging.info('Confusion matrix: \n %s' % total_conf_matrix)
-            tf.compat.v1.logging.info('Step {}: val accuracy {}'.format(step, total_accuracy))
+            # val
+            if step % args.eval_step_interval == 0:
+                total_accuracy = 0
+                val_size = audio_loader.size('validation')
+                total_conf_matrix = None
+                for i in tqdm(range(0, val_size, args.batch_size)):
+                    val_fingerprints, val_ground_truth = audio_loader \
+                        .load_batch(sess, args.batch_size, offset=i, background_frequency=0,
+                                    background_volume_range=0, time_shift=0, mode='validation')
+                    val_summary, val_accuracy, val_matrix = sess.run(
+                        [merged_summaries, evaluation_step, confusion_matrix],
+                        feed_dict={
+                            fingerprint_input: val_fingerprints,
+                            ground_truth_input: val_ground_truth,
+                            dropout_prob: 1.0})
+                    validation_writer.add_summary(val_summary, step)
+                    batch_size = min(args.batch_size, val_size - i)
+                    total_accuracy += (val_accuracy * batch_size) / val_size
+                    if total_conf_matrix is None:
+                        total_conf_matrix = val_matrix
+                    else:
+                        total_conf_matrix += val_matrix
+                tf.compat.v1.logging.info('Confusion matrix: \n %s' % total_conf_matrix)
+                tf.compat.v1.logging.info('Step {}: val accuracy {}'.format(step, total_accuracy))
 
-            # Save the model checkpoint when validation accuracy improves
-            if total_accuracy >= best_accuracy:
-                best_accuracy = total_accuracy
-                checkpoint_path = os.path.join(
-                    args.train_dir, 'best',
-                    '{}_{}.ckpt'.format(args.model_architecture, str(int(best_accuracy * 10000))))
-                saver.save(sess, checkpoint_path, global_step=step)
-                tf.compat.v1.logging.info('Saving best model to {} - step {}'.format(checkpoint_path, step))
-            tf.compat.v1.logging.info('So far the best validation accuracy is %.2f%%' % (best_accuracy * 100))
+                # Save the model checkpoint when validation accuracy improves
+                if total_accuracy >= best_accuracy:
+                    best_accuracy = total_accuracy
+                    checkpoint_path = os.path.join(
+                        args.train_dir, 'best',
+                        '{}_{}.ckpt'.format(args.model_architecture, str(int(best_accuracy * 10000))))
+                    saver.save(sess, checkpoint_path, global_step=step)
+                    tf.compat.v1.logging.info('Saving best model to {} - step {}'.format(checkpoint_path, step))
+                tf.compat.v1.logging.info('So far the best validation accuracy is %.2f%%' % (best_accuracy * 100))
 
     # test
     print('Testing')

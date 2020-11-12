@@ -4,6 +4,8 @@ import librosa
 import numpy as np
 from utils import *
 from config import *
+from tqdm import tqdm
+from glob import glob
 import tensorflow as tf
 from data import AudioLoader
 from models import select_model
@@ -24,8 +26,8 @@ def test_batch():
         model_settings = model.prepare_model_settings()
         print('-----\nModel settings: {}'.format(model_settings))
 
-        audio_loader = AudioLoader(args.data_dir, wanted_words, SILENCE_PERCENTAGE, UNKNOWN_PERCENTAGE,
-                                   VALIDATION_PERCENTAGE, TESTING_PERCENTAGE, model_settings)
+        audio_loader = AudioLoader(args.data_dir, wanted_words, SILENCE_PERCENTAGE, VOCAL_PERCENTAGE,
+                                   NEGATIVE_PERCENTAGE, VALIDATION_PERCENTAGE, TESTING_PERCENTAGE, model_settings)
         fingerprint_size = model_settings['fingerprint_size']
         label_count = model_settings['label_count']
         fingerprint_input = tf.compat.v1.placeholder(tf.float32, [None, fingerprint_size], name='fingerprint_input')
@@ -139,34 +141,24 @@ def test_tflite():
     print(output_details)
     interpreter.allocate_tensors()
 
-    from glob import glob
-    import shutil
-    from tqdm import tqdm
-
-    for file in tqdm(glob('/Users/quangbd/Documents/data/kws-data/viet_nam/keyword/*.wav')):
+    for file in glob('/Users/quangbd/Documents/data/kws-data/viet_nam_20201103/_real*_/*.wav'):
         try:
-            # print(file)
-            start = time.time()
             audio, sr = librosa.load(file, sr=16000, duration=1)
-            # print(audio)
             audio = np.reshape(audio, [16000, 1])
             input_data = np.array(audio, dtype=np.float32)
             interpreter.set_tensor(input_details[0]['index'], input_data)
-
             interpreter.invoke()
-
             output_data = interpreter.get_tensor(output_details[0]['index'])[0]
-            # print(output_data)
-            # print('Time: ', (time.time() - start) * 1000)
             re_index = np.argmax(output_data)
-
             args = prepare_normal_config()
             labels = prepare_words_list(args.wanted_words.split(','))
-            if output_data[re_index] <= 0.99:
-                shutil.move(file,
-                            os.path.join('/Users/quangbd/Documents/data/kws-data/viet_nam/noise', file.split('/')[-1]))
-                # print('Result: {} {}'.format(labels[re_index], output_data[re_index]))
-                # print('-------')
+            score = output_data[re_index]
+            label = labels[re_index]
+            # print(label)
+            # if label == '_silence_':
+            print(file)
+            print('Result: {} {}'.format(label, score))
+            print('-------')
         except:
             pass
 
