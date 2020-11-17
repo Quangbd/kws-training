@@ -97,6 +97,7 @@ def main(_):
                 .load_batch(sess, args.batch_size, offset,
                             BACKGROUND_FREQUENCY, BACKGROUND_VOLUME,
                             BACKGROUND_SILENCE_FREQUENCY, BACKGROUND_SILENCE_VOLUME,
+                            DOWN_VOLUME_FREQUENCY, DOWN_VOLUME_RANGE,
                             time_shift_samples, mode='training')
             train_summary, train_accuracy, cross_entropy_value, _, _ = sess.run(
                 [merged_summaries, evaluation_step, cross_entropy_mean, train_step, increment_global_step],

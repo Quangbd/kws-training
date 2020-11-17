@@ -7,7 +7,7 @@ from tensorflow.python.util import compat
 
 
 def prepare_words_list(wanted_words):
-    return [SILENCE_LABEL, VOCAL_WORD_LABEL, NEGATIVE_WORD_LABEL] + wanted_words
+    return [NEGATIVE_WORD_LABEL] + wanted_words
 
 
 def which_set(filename, validation_percentage, testing_percentage):
@@ -88,7 +88,7 @@ def prepare_normal_config():
     parser.add_argument('--checkpoint',
                         type=str,
                         default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3/'
-                                'training/best/ds_cnn_9934.ckpt-59000',
+                                'training/best/ds_cnn_9974.ckpt-52000',
                         help='Checkpoint to load the weights from.')
     parser.add_argument('--pb',
                         type=str,

@@ -31,11 +31,11 @@ class AudioLoader:
     def prepare_data_index(self):
         wanted_words_index = {}
         for index, wanted_word in enumerate(self.wanted_words):
-            wanted_words_index[wanted_word] = index + 3
+            wanted_words_index[wanted_word] = index + 1
         vocal_index = {'validation': [], 'testing': [], 'training': []}
         negative_index = {'validation': [], 'testing': [], 'training': []}
-        real_vocal_index = {'validation': [], 'testing': [], 'training': []}
-        real_silence_index = {'validation': [], 'testing': [], 'training': []}
+        real_negative_index = {'validation': [], 'testing': [], 'training': []}
+        augment_positive_index = {'validation': [], 'testing': [], 'training': []}
         all_words = {}
 
         # Look through all the sub folders to find audio samples
@@ -51,10 +51,10 @@ class AudioLoader:
                 self.data_index[set_index].append({'label': word, 'file': wav_path})
             elif word == VOCAL_WORD_LABEL:
                 vocal_index[set_index].append({'label': word, 'file': wav_path})
-            elif word == REAL_VOCAL_LABEL:
-                real_vocal_index[set_index].append({'label': word, 'file': wav_path})
-            elif word == REAL_SILENCE_LABEL:
-                real_silence_index[set_index].append({'label': word, 'file': wav_path})
+            elif word == REAL_NEGATIVE_LABEL:
+                real_negative_index[set_index].append({'label': word, 'file': wav_path})
+            elif word == AUGMENT_POSITIVE_LABEL:
+                augment_positive_index[set_index].append({'label': word, 'file': wav_path})
             else:
                 negative_index[set_index].append({'label': word, 'file': wav_path})
         if not all_words:
@@ -84,24 +84,20 @@ class AudioLoader:
             self.data_index[set_index].extend(negative_index[set_index][:negative_size])
 
             # Pick real silence to add to each partition of the data set.
-            random.shuffle(real_silence_index[set_index])
-            self.data_index[set_index].extend(real_silence_index[set_index])
+            random.shuffle(real_negative_index[set_index])
+            self.data_index[set_index].extend(real_negative_index[set_index])
 
-            # Pick real vocal to add to each partition of the data set.
-            random.shuffle(real_vocal_index[set_index])
-            self.data_index[set_index].extend(real_vocal_index[set_index])
+            # Pick augment positive to add to each partition of the data set.
+            random.shuffle(augment_positive_index[set_index])
+            self.data_index[set_index].extend(augment_positive_index[set_index])
 
         # Prepare the rest of the result data structure.
         for word in all_words:
-            if word in wanted_words_index:
-                self.word_to_index[word] = wanted_words_index[word]
-            elif word == VOCAL_WORD_LABEL or word == REAL_VOCAL_LABEL:
-                self.word_to_index[word] = VOCAL_WORD_INDEX
-            elif word == REAL_SILENCE_LABEL:
-                self.word_to_index[word] = SILENCE_INDEX
+            if word in wanted_words_index or word == AUGMENT_POSITIVE_LABEL:
+                self.word_to_index[word] = POSITIVE_WORD_INDEX
             else:
                 self.word_to_index[word] = NEGATIVE_WORD_INDEX
-        self.word_to_index[SILENCE_LABEL] = SILENCE_INDEX
+        self.word_to_index[SILENCE_LABEL] = NEGATIVE_WORD_INDEX
 
         # Make sure the ordering is random.
         print('-----')
@@ -116,9 +112,11 @@ class AudioLoader:
                 label = self.words_list[self.word_to_index[sample['label']]]
                 if label in count_label:
                     count_label[label] += 1
-                    total_count_label[label] += 1
                 else:
                     count_label[label] = 1
+                if label in total_count_label:
+                    total_count_label[label] += 1
+                else:
                     total_count_label[label] = 1
             print('Set index:', set_index, ' - Count:', sorted(count_label.items()),
                   ' - Sum:', sum(count_label.values()))
@@ -161,7 +159,11 @@ class AudioLoader:
         background_volume_placeholder_ = tf.compat.v1.placeholder(tf.float32, [])
         background_mul = tf.multiply(background_data_placeholder_, background_volume_placeholder_)
         background_add = tf.add(background_mul, sliced_foreground)
-        background_clamp = tf.clip_by_value(background_add, -1.0, 1.0)
+
+        # Down volume
+        down_volume_placeholder_ = tf.compat.v1.placeholder(tf.float32, [])
+        down_volume = tf.multiply(background_add, down_volume_placeholder_)
+        background_clamp = tf.clip_by_value(down_volume, -1.0, 1.0)
 
         # Run the spectrogram and MFCC ops to get a 2D 'fingerprint' of the audio.
         spectrogram = tf.raw_ops.AudioSpectrogram(input=background_clamp,
@@ -176,11 +178,13 @@ class AudioLoader:
                 'time_shift_padding_placeholder_': time_shift_padding_placeholder_,
                 'time_shift_offset_placeholder_': time_shift_offset_placeholder_,
                 'background_data_placeholder_': background_data_placeholder_,
-                'background_volume_placeholder_': background_volume_placeholder_}, mfcc_
+                'background_volume_placeholder_': background_volume_placeholder_,
+                'down_volume_placeholder_': down_volume_placeholder_}, mfcc_
 
     def load_batch(self, sess, batch_size=100, offset=0,
                    background_frequency=0, background_volume_range=0,
                    background_silence_frequency=0, background_silence_volume_range=0,
+                   down_volume_frequency=0, down_volume_range=0,
                    time_shift=0, mode='training'):
         # Pick one of the partitions to choose samples from.
         candidates = self.data_index[mode]
@@ -229,8 +233,8 @@ class AudioLoader:
                 background_random = np.random.uniform(0, 1)
                 if sample_label == SILENCE_LABEL and background_random < background_silence_frequency:
                     background_volume = np.random.uniform(0, background_silence_volume_range)
-                elif sample_label != SILENCE_LABEL and sample_label != REAL_SILENCE_LABEL and \
-                        sample_label != REAL_VOCAL_LABEL and background_random < background_frequency:
+                elif sample_label != SILENCE_LABEL and sample_label != REAL_NEGATIVE_LABEL and \
+                        sample_label != AUGMENT_POSITIVE_LABEL and background_random < background_frequency:
                     background_volume = np.random.uniform(0, background_volume_range)
                 else:
                     background_volume = 0
@@ -246,7 +250,14 @@ class AudioLoader:
             else:
                 input_dict[self.mfcc_input_['foreground_volume_placeholder_']] = 1
 
-            # Run the graph to produce the output audio.
+            # Down volume
+            down_volume_random = np.random.uniform(0, 1)
+            if down_volume_random < down_volume_frequency:
+                input_dict[self.mfcc_input_['down_volume_placeholder_']] = np.random.uniform(down_volume_range, 1)
+            else:
+                input_dict[self.mfcc_input_['down_volume_placeholder_']] = 1
+
+                # Run the graph to produce the output audio.
             data[i - offset, :] = sess.run(self.mfcc_, feed_dict=input_dict).flatten()
             label_index = self.word_to_index[sample['label']]
             labels[i - offset, label_index] = 1

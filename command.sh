@@ -149,7 +149,7 @@ python train.py --data_dir /home/ubuntu/kws-data/speech_commands_v0.02 \
                 --wanted_words yes,no,up,down,left,right,on,off,stop,go \
                 --batch_size 1024
 
-env CUDA_VISIBLE_DEVICES=0, python train.py --data_dir /home/ubuntu/viet_nam_20201103 \
+env CUDA_VISIBLE_DEVICES=4, python train.py --data_dir /home/ubuntu/viet_nam_20201113 \
                 --model_architecture ds_cnn \
                 --model_size_info 6 276 10 4 2 1 276 3 3 2 2 276 3 3 1 1 276 3 3 1 1 276 3 3 1 1 276 3 3 1 1 \
                 --dct_coefficient_count 10 \

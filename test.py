@@ -141,7 +141,7 @@ def test_tflite():
     print(output_details)
     interpreter.allocate_tensors()
 
-    for file in glob('/Users/quangbd/Documents/data/kws-data/viet_nam_20201103/_real*_/*.wav'):
+    for file in glob('/Users/quangbd/Desktop/test/*.wav'):
         try:
             audio, sr = librosa.load(file, sr=16000, duration=1)
             audio = np.reshape(audio, [16000, 1])
@@ -155,7 +155,7 @@ def test_tflite():
             score = output_data[re_index]
             label = labels[re_index]
             # print(label)
-            # if label == '_silence_':
+            # if label == 'viet_nam' and score < 0.6:
             print(file)
             print('Result: {} {}'.format(label, score))
             print('-------')
