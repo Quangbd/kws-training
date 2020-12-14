@@ -163,6 +163,21 @@ env CUDA_VISIBLE_DEVICES=4, python train.py --data_dir /home/ubuntu/viet_nam_202
                 --batch_size 128 \
                 --eval_step_interval 1000
 
+# DS_CNN
+env CUDA_VISIBLE_DEVICES=7, python train.py --data_dir /home/ubuntu/viet_nam_20201116 \
+                                            --model_architecture crnn \
+                                            --model_size_info 48 10 4 2 2 2 60 84 \
+                                            --dct_coefficient_count 10 \
+                                            --window_size_ms 40 \
+                                            --window_stride_ms 20 \
+                                            --learning_rate 0.00005,0.00003,0.00001 \
+                                            --training_steps 15000,25000,20000 \
+                                            --summaries_dir work/crnn/crnn1/logs \
+                                            --train_dir work/crnn/crnn1/training \
+                                            --wanted_words viet_nam \
+                                            --batch_size 128 \
+                                            --eval_step_interval 1000
+
 # Test
 python test.py --data_dir /Users/quangbd/Documents/data/kws-data/speech_commands_v0.02 \
               --checkpoint /Users/quangbd/Documents/data/model/kws/speech_commands_v0.02/ds_cnn/ds_cnn3/training/best/ds_cnn_9457.ckpt-23200 \

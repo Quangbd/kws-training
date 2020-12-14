@@ -1,4 +1,5 @@
-import time
+import librosa
+import numpy as np
 from utils import *
 import tensorflow as tf
 from models import select_model
@@ -77,6 +78,20 @@ def pb2tflite():
         output_arrays=['labels_softmax'])
     converter.allow_custom_ops = True
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
+
+    # def representative_dataset_gen():
+    #     for file_index in range(4):
+    #         audio, sr = librosa.load('/Users/quangbd/Desktop/2020-12-06/{}.wav'.format(file_index),
+    #                                  sr=16000, duration=1)
+    #         audio = np.reshape(audio, [16000, 1])
+    #         input_data = np.array(audio, dtype=np.float32)
+    #         print(input_data)
+    #         yield [input_data]
+
+    # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+    # converter.inference_input_type = tf.uint8  # or tf.uint8
+    # converter.inference_output_type = tf.uint8  # or tf.uint8
+    # converter.representative_dataset = representative_dataset_gen
     tflite_model = converter.convert()
     with open(args.tflite, 'wb') as f:
         f.write(tflite_model)

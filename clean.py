@@ -3,8 +3,11 @@ import re
 import sox
 import json
 import shutil
+import librosa
+import numpy as np
 from glob import glob
 from tqdm import tqdm
+from scipy.io.wavfile import write
 from collections import defaultdict
 from multiprocessing import freeze_support
 from multiprocessing.pool import ThreadPool as Pool
@@ -550,12 +553,71 @@ def clean_test():
             file_index = line[0]
             content = line[1].strip().lower()
             if content == 'việt bắc':
-                if os.path.exists(os.path.join('/Users/quangbd/Documents/data/kws-data/viet_nam_20201103/_vocal_', file_index)):
+                if os.path.exists(
+                        os.path.join('/Users/quangbd/Documents/data/kws-data/viet_nam_20201103/_vocal_', file_index)):
                     print(line)
                     shutil.move(
                         os.path.join('/Users/quangbd/Documents/data/kws-data/viet_nam_20201103/_vocal_', file_index),
                         os.path.join('/Users/quangbd/Documents/data/kws-data/viet_nam_20201103/tmp', file_index))
 
 
+def tmp():
+    data_map = {}
+    with open('/Users/quangbd/Desktop/segments') as input_file:
+        for line in input_file:
+            coms = line.strip().split()
+            file_name = coms[1]
+            start = float(coms[2])
+            end = float(coms[3])
+            if file_name in data_map:
+                data_map[file_name].append((start, end))
+            else:
+                data_map[file_name] = [(start, end)]
+
+    bl_file = []
+    for file_name in data_map:
+        if len(data_map[file_name]) != 6:
+            bl_file.append(int(file_name))
+    print(sorted(bl_file))
+
+    # import time
+    # with open('/Users/quangbd/Desktop/segments') as input_file:
+    #     for line in input_file:
+    #         coms = line.strip().split()
+    #         file_name = coms[1]
+    #         start = float(coms[2])
+    #         end = float(coms[3])
+    #         tfm = sox.Transformer()
+    #         tfm.trim(start, end)
+    #         tfm.build_file('/Users/quangbd/Desktop/heyvf_20201209/{}.wav'.format(file_name),
+    #                        '/Users/quangbd/Desktop/heyvf_20201209_clean/{}_{}.wav'.format(file_name, time.time()))
+
+
+def tmp2():
+    expect_count_signal = 16000
+    for file in glob('/Users/quangbd/Desktop/heyvf_20201209_clean/*.wav'):
+        y, _ = librosa.load(file, sr=None)
+        count_signal = len(y)
+        if len(y) > expect_count_signal:
+            count_signal_remain = count_signal - expect_count_signal
+            if count_signal_remain % 2 != 0:
+                i = ((count_signal_remain // 2) + 1)
+                y = y[i: i + 16000]
+            else:
+                i = (count_signal_remain // 2)
+                y = y[i: i + 16000]
+        elif len(y) < expect_count_signal:
+            count_signal_remain = expect_count_signal - count_signal
+            if count_signal_remain % 2 != 0:
+                pad_left = count_signal_remain // 2 + 1
+            else:
+                pad_left = count_signal_remain // 2
+            pad_right = count_signal_remain // 2
+            y = np.pad(y, (pad_left, pad_right), 'constant', constant_values=(0, 0))
+        write('/Users/quangbd/Desktop/heyvf_20201214_clean/{}'.format(file.split('/')[-1]),
+              expect_count_signal, np.array(y * 32767, dtype=np.int16))
+
+
 if __name__ == '__main__':
-    clean_test()
+    # clean_test()
+    tmp2()

@@ -73,8 +73,31 @@ def prepare_normal_config():
                         help='Directory to write event logs and checkpoint.')
     parser.add_argument('--wanted_words',
                         type=str,
-                        default='viet_nam',
+                        default='heyvf',
                         help='Words to use (others will be added to an unknown label).', )
+    # parser.add_argument('--model_architecture',
+    #                     type=str,
+    #                     default='ds_cnn',
+    #                     help='What model architecture to use')
+    # parser.add_argument('--model_size_info',
+    #                     type=int,
+    #                     nargs="+",
+    #                     default=[6, 276, 10, 4, 2, 1, 276, 3, 3, 2, 2, 276, 3, 3, 1, 1,
+    #                              276, 3, 3, 1, 1, 276, 3, 3, 1, 1, 276, 3, 3, 1, 1],
+    #                     help='Model dimensions - different for various models.')
+    # parser.add_argument('--checkpoint',
+    #                     type=str,
+    #                     default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3/'
+    #                             'training/best/ds_cnn_9974.ckpt-52000',
+    #                     help='Checkpoint to load the weights from.')
+    # parser.add_argument('--pb',
+    #                     type=str,
+    #                     default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3.pb',
+    #                     help='Where to save the frozen graph.')
+    # parser.add_argument('--tflite',
+    #                     type=str,
+    #                     default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3.tflite',
+    #                     help='Where to save the frozen graph.')
     parser.add_argument('--model_architecture',
                         type=str,
                         default='ds_cnn',
@@ -82,22 +105,43 @@ def prepare_normal_config():
     parser.add_argument('--model_size_info',
                         type=int,
                         nargs="+",
-                        default=[6, 276, 10, 4, 2, 1, 276, 3, 3, 2, 2, 276, 3, 3, 1, 1,
-                                 276, 3, 3, 1, 1, 276, 3, 3, 1, 1, 276, 3, 3, 1, 1],
+                        default=[5, 64, 10, 4, 2, 2, 64, 3, 3, 1, 1, 64, 3, 3, 1, 1, 64, 3, 3, 1, 1, 64, 3, 3, 1, 1],
                         help='Model dimensions - different for various models.')
     parser.add_argument('--checkpoint',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3/'
-                                'training/best/ds_cnn_9974.ckpt-52000',
+                        default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1/'
+                                'training/best/ds_cnn_9980.ckpt-29000',
                         help='Checkpoint to load the weights from.')
     parser.add_argument('--pb',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3.pb',
+                        default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1.pb',
                         help='Where to save the frozen graph.')
     parser.add_argument('--tflite',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3.tflite',
+                        default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1.tflite',
                         help='Where to save the frozen graph.')
+    # parser.add_argument('--model_architecture',
+    #                     type=str,
+    #                     default='crnn',
+    #                     help='What model architecture to use')
+    # parser.add_argument('--model_size_info',
+    #                     type=int,
+    #                     nargs="+",
+    #                     default=[48, 10, 4, 2, 2, 2, 60, 84],
+    #                     help='Model dimensions - different for various models.')
+    # parser.add_argument('--checkpoint',
+    #                     type=str,
+    #                     default='/Users/quangbd/Documents/data/model/kws/viet_nam/crnn/crnn1/'
+    #                             'training/best/crnn_9860.ckpt-3000',
+    #                     help='Checkpoint to load the weights from.')
+    # parser.add_argument('--pb',
+    #                     type=str,
+    #                     default='/Users/quangbd/Documents/data/model/kws/viet_nam/crnn/crnn1.pb',
+    #                     help='Where to save the frozen graph.')
+    # parser.add_argument('--tflite',
+    #                     type=str,
+    #                     default='/Users/quangbd/Documents/data/model/kws/viet_nam/crnn/crnn1.tflite',
+    #                     help='Where to save the frozen graph.')
     return parser.parse_args()
 
 
@@ -105,11 +149,11 @@ def prepare_record_config():
     parser = argparse.ArgumentParser(description='set input arguments')
     parser.add_argument('--model_path',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3.tflite',
+                        default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1.tflite',
                         help='Tflite model path')
     parser.add_argument('--wanted_words',
                         type=str,
-                        default='viet_nam',
+                        default='heyvf',
                         help='Words to use (others will be added to an unknown label).')
     parser.add_argument('--chunk_size',
                         type=int,

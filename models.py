@@ -19,6 +19,8 @@ def select_model(label_count, window_size_ms, window_stride_ms, dct_coefficient_
         return LSTM(config)
     elif name == 'ds_cnn':
         return DS_CNN(config)
+    elif name == 'crnn':
+        return CRNN(config)
 
 
 class KWSModel:
@@ -298,6 +300,70 @@ class LSTM(KWSModel):
             bias_o = tf.compat.v1.get_variable('b_o', shape=[num_classes])
             logits = tf.matmul(flow, weights_o) + bias_o
         return logits, dropout_prob
+
+
+class CRNN(KWSModel):
+    def forward(self, fingerprint_input, model_size_info=None, is_training=True):
+        dropout_prob = 1.0
+        if is_training:
+            dropout_prob = tf.compat.v1.placeholder(tf.float32, name='dropout_prob')
+        input_frequency_size = self.dct_coefficient_count
+        input_time_size = self.spectrogram_length
+        fingerprint_4d = tf.reshape(fingerprint_input, [-1, input_time_size, input_frequency_size, 1])
+
+        # CNN part
+        first_filter_count = model_size_info[0]
+        first_filter_height = model_size_info[1]
+        first_filter_width = model_size_info[2]
+        first_filter_stride_y = model_size_info[3]
+        first_filter_stride_x = model_size_info[4]
+
+        first_weights = tf.compat.v1.get_variable('W', shape=[first_filter_height, first_filter_width,
+                                                              1, first_filter_count],
+                                                  initializer=tf.initializers.glorot_uniform())
+        first_bias = tf.Variable(tf.zeros([first_filter_count]))
+        first_conv = tf.nn.conv2d(fingerprint_4d, first_weights, [1, first_filter_stride_y, first_filter_stride_x, 1],
+                                  'VALID') + first_bias
+        first_relu = tf.nn.relu(first_conv)
+        if is_training:
+            first_dropout = tf.nn.dropout(first_relu, 1 - dropout_prob)
+        else:
+            first_dropout = first_relu
+        first_conv_output_width = int(
+            math.floor((input_frequency_size - first_filter_width + first_filter_stride_x) / first_filter_stride_x))
+        first_conv_output_height = int(
+            math.floor((input_time_size - first_filter_height + first_filter_stride_y) / first_filter_stride_y))
+
+        # GRU part
+        num_rnn_layers = model_size_info[5]
+        rnn_units = model_size_info[6]
+        flow = tf.reshape(first_dropout, [-1, first_conv_output_height, first_conv_output_width * first_filter_count])
+        cell_fw = []
+        cell_bw = []
+        for i in range(num_rnn_layers):
+            cell_fw.append(tf.compat.v1.nn.rnn_cell.GRUCell(rnn_units))
+        cells = tf.compat.v1.nn.rnn_cell.MultiRNNCell(cell_fw)
+        _, last = tf.compat.v1.nn.dynamic_rnn(cell=cells, inputs=flow, dtype=tf.float32)
+        flow_dim = rnn_units
+        flow = last[-1]
+
+        first_fc_output_channels = model_size_info[7]
+        first_fc_weights = tf.compat.v1.get_variable('fcw', shape=[flow_dim, first_fc_output_channels],
+                                                     initializer=tf.initializers.glorot_uniform())
+
+        first_fc_bias = tf.Variable(tf.zeros([first_fc_output_channels]))
+        first_fc = tf.nn.relu(tf.matmul(flow, first_fc_weights) + first_fc_bias)
+        if is_training:
+            final_fc_input = tf.nn.dropout(first_fc, 1 - dropout_prob)
+        else:
+            final_fc_input = first_fc
+
+        label_count = self.label_count
+        final_fc_weights = tf.Variable(tf.random.truncated_normal([first_fc_output_channels, label_count], stddev=0.01))
+
+        final_fc_bias = tf.Variable(tf.zeros([label_count]))
+        final_fc = tf.matmul(final_fc_input, final_fc_weights) + final_fc_bias
+        return final_fc, dropout_prob
 
 
 class DS_CNN(KWSModel):
