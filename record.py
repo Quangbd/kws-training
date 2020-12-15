@@ -41,11 +41,12 @@ def main():
         interpreter.set_tensor(input_details[0]['index'], input_data)
         interpreter.invoke()
         output_data = interpreter.get_tensor(output_details[0]['index'])[0]
+        # print(output_data, time.time() - start)
         re_index = int(np.argmax(output_data))
         re_score = output_data[re_index]
-        if re_index == 3 and re_score > 0.9 and (time.time() - write_time) > 3:
-            write('/Users/quangbd/Downloads/silence_custom/{}_0.wav'.format(int(time.time())), SAMPLE_RATE, input_data)
-            write_time = time.time()
+        # if re_index == 3 and re_score > 0.9 and (time.time() - write_time) > 3:
+        #     write('/Users/quangbd/Downloads/silence_custom/{}_0.wav'.format(int(time.time())), SAMPLE_RATE, input_data)
+        #     write_time = time.time()
         print('Result: {} {} - Latency {}'.format(labels[re_index], int(re_score * 100),
                                                   round((time.time() - start) * 1000, 2)))
 

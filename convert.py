@@ -1,8 +1,9 @@
 import librosa
 import numpy as np
 from utils import *
+from glob import glob
 import tensorflow as tf
-from models import select_model
+from models2 import select_model
 from tensorflow.python.framework import graph_util
 
 
@@ -49,7 +50,7 @@ def checkpoint2pb():
         logits, dropout_prob = model.forward(reshaped_input, args.model_size_info, is_training=False)
 
         # Create an output to use for inference.
-        tf.nn.softmax(logits, name='labels_softmax')
+        tf.sigmoid(logits, name='labels_sigmoid')
 
         model.load_variables_from_checkpoint(sess, args.checkpoint)
         nodes = [op.name for op in tf.compat.v1.get_default_graph().get_operations()]
@@ -57,7 +58,7 @@ def checkpoint2pb():
 
         # Turn all the variables into inline constants inside the graph and save it.
         frozen_graph_def = graph_util.convert_variables_to_constants(
-            sess, sess.graph_def, ['labels_softmax'])
+            sess, sess.graph_def, ['labels_sigmoid'])
         tf.compat.v1.train.write_graph(frozen_graph_def,
                                        os.path.dirname(args.pb),
                                        os.path.basename(args.pb),
@@ -75,20 +76,18 @@ def pb2tflite():
     converter = tf.compat.v1.lite.TFLiteConverter.from_frozen_graph(
         args.pb,
         input_arrays=['decoded_sample_data'],
-        output_arrays=['labels_softmax'])
+        output_arrays=['labels_sigmoid'])
     converter.allow_custom_ops = True
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
 
     # def representative_dataset_gen():
-    #     for file_index in range(4):
-    #         audio, sr = librosa.load('/Users/quangbd/Desktop/2020-12-06/{}.wav'.format(file_index),
-    #                                  sr=16000, duration=1)
+    #     for file_name in glob('/Users/quangbd/Desktop/heyvf_20201214/heyvf_20201214_clean/*.wav'):
+    #         audio, sr = librosa.load(file_name, sr=16000, duration=1)
     #         audio = np.reshape(audio, [16000, 1])
     #         input_data = np.array(audio, dtype=np.float32)
-    #         print(input_data)
     #         yield [input_data]
 
-    # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+    # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS, tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
     # converter.inference_input_type = tf.uint8  # or tf.uint8
     # converter.inference_output_type = tf.uint8  # or tf.uint8
     # converter.representative_dataset = representative_dataset_gen

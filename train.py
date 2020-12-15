@@ -34,20 +34,19 @@ def main(_):
     fingerprint_input = tf.compat.v1.placeholder(tf.float32, [None, fingerprint_size], name='fingerprint_input')
     ground_truth_input = tf.compat.v1.placeholder(tf.float32, [None], name='groundtruth_input')
     logits, dropout_prob = model.forward(fingerprint_input, args.model_size_info)
+    logits = tf.sigmoid(logits)
 
     # Create the back propagation and training evaluation machinery in the graph.
-    with tf.name_scope('cross_entropy'):
-        cross_entropy_mean = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-            labels=ground_truth_input, logits=logits))
-    tf.compat.v1.summary.scalar('cross_entropy', cross_entropy_mean)
+    with tf.name_scope('mae'):
+        mae_loss = tf.reduce_mean(tf.compat.v1.losses.absolute_difference(ground_truth_input, logits))
+    tf.compat.v1.summary.scalar('mae', mae_loss)
 
     update_ops = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS)
     with tf.name_scope('train'), tf.control_dependencies(update_ops):
         learning_rate_input = tf.compat.v1.placeholder(tf.float32, [], name='learning_rate_input')
-        train_step = tf.compat.v1.train.AdamOptimizer(learning_rate_input).minimize(cross_entropy_mean)
+        train_step = tf.compat.v1.train.AdamOptimizer(learning_rate_input).minimize(mae_loss)
 
-    sigmoid_logits = tf.sigmoid(logits)
-    evaluation_step = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(ground_truth_input, sigmoid_logits))))
+    evaluation_step = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(ground_truth_input, logits))))
     tf.compat.v1.summary.scalar('accuracy', evaluation_step)
 
     global_step = tf.compat.v1.train.get_or_create_global_step()
@@ -95,15 +94,15 @@ def main(_):
                             BACKGROUND_SILENCE_FREQUENCY, BACKGROUND_SILENCE_VOLUME,
                             DOWN_VOLUME_FREQUENCY, DOWN_VOLUME_RANGE,
                             time_shift_samples, mode='training')
-            train_summary, train_accuracy, cross_entropy_value, _, _ = sess.run(
-                [merged_summaries, evaluation_step, cross_entropy_mean, train_step, increment_global_step],
+            train_summary, train_accuracy, loss, _, _ = sess.run(
+                [merged_summaries, evaluation_step, mae_loss, train_step, increment_global_step],
                 feed_dict={fingerprint_input: train_fingerprints,
                            ground_truth_input: train_ground_truth,
                            learning_rate_input: learning_rate_value,
                            dropout_prob: 1.0})
             train_writer.add_summary(train_summary, step)
-            tf.compat.v1.logging.info('Epoch {} - Step {}: train accuracy {}, cross entropy {}, lr {}'.format(
-                epoch, step, train_accuracy * 100, cross_entropy_value, learning_rate_value))
+            tf.compat.v1.logging.info('Epoch {} - Step {}: train accuracy {}, loss {}, lr {}'.format(
+                epoch, step, train_accuracy * 100, loss, learning_rate_value))
 
             # val
             if step % args.eval_step_interval == 0:

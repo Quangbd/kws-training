@@ -121,6 +121,8 @@ class DS_CNN(KWSModel):
                         f_dim = math.ceil(f_dim / float(conv_sf[layer_no]))
                     net = slim.avg_pool2d(net, [t_dim, f_dim], scope='avg_pool')
             net = tf.squeeze(net, [1, 2], name='SpatialSqueeze')
+            # logits = tf.sigmoid(tf.squeeze(slim.fully_connected(net, label_count, activation_fn=None, scope='fc1')),
+            #                     name='labels_sigmoid')
             logits = tf.squeeze(slim.fully_connected(net, label_count, activation_fn=None, scope='fc1'))
 
         return logits, dropout_prob

@@ -110,7 +110,7 @@ def prepare_normal_config():
     parser.add_argument('--checkpoint',
                         type=str,
                         default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1/'
-                                'training/best/ds_cnn_9985.ckpt-46000',
+                                'training/best/ds_cnn_205.ckpt-47000',
                         help='Checkpoint to load the weights from.')
     parser.add_argument('--pb',
                         type=str,
@@ -149,7 +149,7 @@ def prepare_record_config():
     parser = argparse.ArgumentParser(description='set input arguments')
     parser.add_argument('--model_path',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1.tflite',
+                        default='/Users/quangbd/Documents/data/model/kws/heyvf/backup/ds_cnn1_kws15_20201215.tflite',
                         help='Tflite model path')
     parser.add_argument('--wanted_words',
                         type=str,
