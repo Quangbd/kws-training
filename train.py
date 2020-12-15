@@ -5,7 +5,7 @@ from config import *
 from tqdm import tqdm
 import tensorflow as tf
 from data import AudioLoader
-from models import select_model
+from models2 import select_model
 
 
 def main(_):
@@ -16,7 +16,7 @@ def main(_):
 
     # model
     wanted_words = args.wanted_words.split(',')
-    model = select_model(len(prepare_words_list(wanted_words)), window_size_ms=args.window_size_ms,
+    model = select_model(1, window_size_ms=args.window_size_ms,
                          window_stride_ms=args.window_stride_ms, dct_coefficient_count=args.dct_coefficient_count,
                          name=args.model_architecture)
     model_settings = model.prepare_model_settings()
@@ -27,18 +27,17 @@ def main(_):
                                VALIDATION_PERCENTAGE, TESTING_PERCENTAGE, model_settings)
 
     fingerprint_size = model_settings['fingerprint_size']
-    label_count = model_settings['label_count']
     time_shift_samples = int((TIME_SHIFT_MS * model_settings['sample_rate']) / 1000)
     training_steps_list = list(map(int, args.training_steps.split(',')))
     learning_rates_list = list(map(float, args.learning_rate.split(',')))
 
     fingerprint_input = tf.compat.v1.placeholder(tf.float32, [None, fingerprint_size], name='fingerprint_input')
-    ground_truth_input = tf.compat.v1.placeholder(tf.float32, [None, label_count], name='groundtruth_input')
+    ground_truth_input = tf.compat.v1.placeholder(tf.float32, [None], name='groundtruth_input')
     logits, dropout_prob = model.forward(fingerprint_input, args.model_size_info)
 
     # Create the back propagation and training evaluation machinery in the graph.
     with tf.name_scope('cross_entropy'):
-        cross_entropy_mean = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+        cross_entropy_mean = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
             labels=ground_truth_input, logits=logits))
     tf.compat.v1.summary.scalar('cross_entropy', cross_entropy_mean)
 
@@ -47,11 +46,8 @@ def main(_):
         learning_rate_input = tf.compat.v1.placeholder(tf.float32, [], name='learning_rate_input')
         train_step = tf.compat.v1.train.AdamOptimizer(learning_rate_input).minimize(cross_entropy_mean)
 
-    predicted_indices = tf.argmax(logits, 1)
-    expected_indices = tf.argmax(ground_truth_input, 1)
-    correct_prediction = tf.equal(predicted_indices, expected_indices)
-    confusion_matrix = tf.math.confusion_matrix(expected_indices, predicted_indices, num_classes=label_count)
-    evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    sigmoid_logits = tf.sigmoid(logits)
+    evaluation_step = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(ground_truth_input, sigmoid_logits))))
     tf.compat.v1.summary.scalar('accuracy', evaluation_step)
 
     global_step = tf.compat.v1.train.get_or_create_global_step()
@@ -74,7 +70,7 @@ def main(_):
     # training loop
     step = 0
     epoch = 0
-    best_accuracy = 0
+    best_accuracy = 100
     training_steps_max = np.sum(training_steps_list)
     train_size = audio_loader.size('training')
     while step < training_steps_max + 1:
@@ -113,29 +109,21 @@ def main(_):
             if step % args.eval_step_interval == 0:
                 total_accuracy = 0
                 val_size = audio_loader.size('validation')
-                total_conf_matrix = None
                 for i in tqdm(range(0, val_size, args.batch_size)):
                     val_fingerprints, val_ground_truth = audio_loader \
                         .load_batch(sess, args.batch_size, offset=i, background_frequency=0,
                                     background_volume_range=0, time_shift=0, mode='validation')
-                    val_summary, val_accuracy, val_matrix = sess.run(
-                        [merged_summaries, evaluation_step, confusion_matrix],
-                        feed_dict={
-                            fingerprint_input: val_fingerprints,
-                            ground_truth_input: val_ground_truth,
-                            dropout_prob: 1.0})
+                    val_summary, val_accuracy = sess.run([merged_summaries, evaluation_step],
+                                                         feed_dict={fingerprint_input: val_fingerprints,
+                                                                    ground_truth_input: val_ground_truth,
+                                                                    dropout_prob: 1.0})
                     validation_writer.add_summary(val_summary, step)
                     batch_size = min(args.batch_size, val_size - i)
                     total_accuracy += (val_accuracy * batch_size) / val_size
-                    if total_conf_matrix is None:
-                        total_conf_matrix = val_matrix
-                    else:
-                        total_conf_matrix += val_matrix
-                tf.compat.v1.logging.info('Confusion matrix: \n %s' % total_conf_matrix)
                 tf.compat.v1.logging.info('Step {}: val accuracy {}'.format(step, total_accuracy))
 
                 # Save the model checkpoint when validation accuracy improves
-                if total_accuracy >= best_accuracy:
+                if total_accuracy <= best_accuracy:
                     best_accuracy = total_accuracy
                     checkpoint_path = os.path.join(
                         args.train_dir, 'best',
@@ -149,24 +137,17 @@ def main(_):
     test_size = audio_loader.size(mode='testing')
     tf.compat.v1.logging.info('set_size=%d', test_size)
     total_accuracy = 0
-    total_conf_matrix = None
     for i in tqdm(range(0, test_size, args.batch_size)):
         test_fingerprints, test_ground_truth = audio_loader \
             .load_batch(sess, args.batch_size, offset=i, background_frequency=0,
                         background_volume_range=0, time_shift=0, mode='testing')
-        test_summary, test_accuracy, test_matrix = sess.run(
-            [merged_summaries, evaluation_step, confusion_matrix],
-            feed_dict={
-                fingerprint_input: test_fingerprints,
-                ground_truth_input: test_ground_truth,
-                dropout_prob: 1.0})
+        test_summary, test_accuracy = sess.run([merged_summaries, evaluation_step],
+                                               feed_dict={
+                                                   fingerprint_input: test_fingerprints,
+                                                   ground_truth_input: test_ground_truth,
+                                                   dropout_prob: 1.0})
         batch_size = min(args.batch_size, test_size - i)
         total_accuracy += (test_accuracy * batch_size) / test_size
-        if total_conf_matrix is None:
-            total_conf_matrix = test_matrix
-        else:
-            total_conf_matrix += test_matrix
-    tf.compat.v1.logging.info('Final confusion matrix: \n %s' % total_conf_matrix)
     tf.compat.v1.logging.info('Final accuracy {}'.format(total_accuracy))
 
     # close

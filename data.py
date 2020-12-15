@@ -195,7 +195,7 @@ class AudioLoader:
 
         # Data and labels will be populated and returned.
         data = np.zeros((sample_count, self.model_settings['fingerprint_size']))
-        labels = np.zeros((sample_count, self.model_settings['label_count']))
+        labels = np.zeros(sample_count)
         desired_samples = self.model_settings['desired_samples']
         use_background = self.background_data and (mode == 'training')
 
@@ -257,10 +257,10 @@ class AudioLoader:
             else:
                 input_dict[self.mfcc_input_['down_volume_placeholder_']] = 1
 
-                # Run the graph to produce the output audio.
+            # Run the graph to produce the output audio.
             data[i - offset, :] = sess.run(self.mfcc_, feed_dict=input_dict).flatten()
             label_index = self.word_to_index[sample['label']]
-            labels[i - offset, label_index] = 1
+            labels[i - offset] = label_index
         return data, labels
 
     def size(self, mode='training'):
