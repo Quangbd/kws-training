@@ -3,13 +3,12 @@ import numpy as np
 from utils import *
 from glob import glob
 import tensorflow as tf
-from models2 import select_model
+from models import select_model
 from tensorflow.python.framework import graph_util
 
 
 def checkpoint2pb():
     def _process(_):
-        # random.seed(RANDOM_SEED)
         tf.compat.v1.disable_eager_execution()
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
         sess = tf.compat.v1.InteractiveSession()
@@ -21,19 +20,6 @@ def checkpoint2pb():
                              name=args.model_architecture)
         model_settings = model.prepare_model_settings()
         print('-----\nModel settings: {}'.format(model_settings))
-
-        # wav_data_placeholder = tf.compat.v1.placeholder(tf.string, [], name='wav_data')
-        # decoded_sample_data = tf.audio.decode_wav(wav_data_placeholder,
-        #                                           desired_channels=1,
-        #                                           desired_samples=model_settings['desired_samples'],
-        #                                           name='decoded_sample_data')
-        # spectrogram = tf.raw_ops.AudioSpectrogram(input=decoded_sample_data.audio,
-        #                                           window_size=model_settings['window_size_samples'],
-        #                                           stride=model_settings['window_stride_samples'],
-        #                                           magnitude_squared=True)
-        # mfcc_ = tf.raw_ops.Mfcc(spectrogram=spectrogram,
-        #                         sample_rate=decoded_sample_data.sample_rate,
-        #                         dct_coefficient_count=model_settings['dct_coefficient_count'])
         decoded_sample_data = tf.compat.v1.placeholder(tf.float32, [model_settings['sample_rate'], 1],
                                                        name='decoded_sample_data')
         spectrogram = tf.raw_ops.AudioSpectrogram(input=decoded_sample_data,
@@ -80,17 +66,6 @@ def pb2tflite():
     converter.allow_custom_ops = True
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
 
-    # def representative_dataset_gen():
-    #     for file_name in glob('/Users/quangbd/Desktop/heyvf_20201214/heyvf_20201214_clean/*.wav'):
-    #         audio, sr = librosa.load(file_name, sr=16000, duration=1)
-    #         audio = np.reshape(audio, [16000, 1])
-    #         input_data = np.array(audio, dtype=np.float32)
-    #         yield [input_data]
-
-    # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS, tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-    # converter.inference_input_type = tf.uint8  # or tf.uint8
-    # converter.inference_output_type = tf.uint8  # or tf.uint8
-    # converter.representative_dataset = representative_dataset_gen
     tflite_model = converter.convert()
     with open(args.tflite, 'wb') as f:
         f.write(tflite_model)

@@ -110,7 +110,7 @@ def prepare_normal_config():
     parser.add_argument('--checkpoint',
                         type=str,
                         default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1/'
-                                'training/best/ds_cnn_205.ckpt-47000',
+                                'training/best/ds_cnn_9989.ckpt-58000',
                         help='Checkpoint to load the weights from.')
     parser.add_argument('--pb',
                         type=str,
