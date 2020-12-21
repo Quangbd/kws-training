@@ -75,13 +75,19 @@ class AudioLoader:
 
             # Pick some vocal to add to each partition of the data set.
             random.shuffle(vocal_index[set_index])
-            vocal_size = int(math.ceil(set_size * self.vocal_percentage / 100))
-            self.data_index[set_index].extend(vocal_index[set_index][:vocal_size])
+            if self.vocal_percentage > 0:
+                vocal_size = int(math.ceil(set_size * self.vocal_percentage / 100))
+                self.data_index[set_index].extend(vocal_index[set_index][:vocal_size])
+            else:
+                self.data_index[set_index].extend(vocal_index[set_index])
 
             # Pick some negative to add to each partition of the data set.
             random.shuffle(negative_index[set_index])
-            negative_size = int(math.ceil(set_size * self.negative_percentage / 100))
-            self.data_index[set_index].extend(negative_index[set_index][:negative_size])
+            if self.negative_percentage > 0:
+                negative_size = int(math.ceil(set_size * self.negative_percentage / 100))
+                self.data_index[set_index].extend(negative_index[set_index][:negative_size])
+            else:
+                self.data_index[set_index].extend(negative_index[set_index])
 
             # Pick real silence to add to each partition of the data set.
             random.shuffle(real_negative_index[set_index])

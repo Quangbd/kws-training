@@ -134,14 +134,14 @@ def test_pb():
 
 def test_tflite():
     interpreter = tf.lite.Interpreter(
-        model_path='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3.tflite')
+        model_path='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1.tflite')
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
     print(input_details)
     print(output_details)
     interpreter.allocate_tensors()
 
-    for file in glob('/Users/quangbd/Desktop/test/*.wav'):
+    for file in glob('/Users/quangbd/Desktop/record/*.wav'):
         try:
             audio, sr = librosa.load(file, sr=16000, duration=1)
             audio = np.reshape(audio, [16000, 1])
@@ -149,16 +149,17 @@ def test_tflite():
             interpreter.set_tensor(input_details[0]['index'], input_data)
             interpreter.invoke()
             output_data = interpreter.get_tensor(output_details[0]['index'])[0]
-            re_index = np.argmax(output_data)
-            args = prepare_normal_config()
-            labels = prepare_words_list(args.wanted_words.split(','))
-            score = output_data[re_index]
-            label = labels[re_index]
+            print(output_data)
+            # re_index = np.argmax(output_data)
+            # args = prepare_normal_config()
+            # labels = prepare_words_list(args.wanted_words.split(','))
+            # score = output_data[re_index]
+            # label = labels[re_index]
             # print(label)
             # if label == 'viet_nam' and score < 0.6:
-            print(file)
-            print('Result: {} {}'.format(label, score))
-            print('-------')
+            # print(file)
+            # print('Result: {} {}'.format(label, score))
+            # print('-------')
         except:
             pass
 
