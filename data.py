@@ -4,13 +4,13 @@ import utils
 import random
 import augments
 import numpy as np
-from config import *
+from constant import *
 import tensorflow as tf
 
 
 class AudioLoader:
-    def __init__(self, data_dir, augment_dir, silence_percentage, negative_percentage,
-                 validation_percentage, testing_percentage, model_settings):
+    def __init__(self, data_dir, silence_percentage, negative_percentage,
+                 validation_percentage, testing_percentage, model_settings, augment_dir=None):
         self.data_dir = data_dir
         self.augment_dir = augment_dir
         self.silence_percentage = silence_percentage
@@ -162,8 +162,8 @@ class AudioLoader:
                 'down_volume_placeholder_': down_volume_placeholder_}, mfcc_
 
     def load_batch(self, sess, batch_size=100, offset=0,
-                   background_frequency=0, background_volume_range=0,
-                   background_silence_frequency=0, background_silence_volume_range=0,
+                   background_frequency=0, background_silence_frequency=0,
+                   background_silence_volume_range=0,
                    down_volume_frequency=0, down_volume_range=0,
                    time_shift=0, mode='training'):
         # Pick one of the partitions to choose samples from.

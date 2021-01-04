@@ -12,6 +12,7 @@ import librosa
 import augment
 import torchaudio
 import numpy as np
+from glob import glob
 from dataclasses import dataclass
 
 
@@ -87,9 +88,10 @@ def augmentation_factory(methods, background_noise, sampling_rate=16_000, total_
     return chain
 
 
-def process_file(file_path, output_dir, background_noise=None):
+def process_file(file_path, output_dir, background_noise=None, file_name=None):
     """
     Process wav file by chains
+    :param file_name: Optional for file name
     :param file_path: Input path
     :param output_dir: Output directory path
     :param background_noise: Background data
@@ -110,7 +112,10 @@ def process_file(file_path, output_dir, background_noise=None):
                                  target_info=dict(rate=sampling_rate, length=0))
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    output_path = os.path.join(output_dir, '{}_{}.wav'.format('_'.join(methods), time.time()))
+    if file_name:
+        output_path = os.path.join(output_dir, '{}_{}_{}.wav'.format(file_name, '_'.join(methods), time.time()))
+    else:
+        output_path = os.path.join(output_dir, '{}_{}.wav'.format('_'.join(methods), time.time()))
     if y.numel() > 16000:
         y = y[:, :16000]
         print(output_path)
@@ -118,8 +123,29 @@ def process_file(file_path, output_dir, background_noise=None):
     return output_path
 
 
+def augment_positive(total_sample=16_000, limit=5000):
+    # get background noise
+    background_all_data = []
+    for background_noise_file in glob('/Users/quangbd/Documents/data/kws/train/background_noise/*.wav'):
+        background_all_data.append(librosa.load(background_noise_file, sr=None)[0])
+
+    count = 0
+    while True:
+        for file in glob('/Users/quangbd/Documents/data/kws/train/keyword/*.wav'):
+            background_index = random.randint(0, len(background_all_data) - 1)
+            background_data = background_all_data[background_index]
+            random_index = random.randint(0, len(background_data) - total_sample - 1)
+            noise = background_data[random_index:random_index + total_sample]
+            process_file(file, '/Users/quangbd/Documents/data/kws/train/augment_positive', noise,
+                         file.split('/')[-1].split('_')[0])
+            count += 1
+        if count > limit:
+            break
+
+
 if __name__ == '__main__':
-    back, _ = librosa.load('/Users/quangbd/Desktop/custom1_pi_noise.wav', sr=None)
-    back = back[:16000]
-    process_file('/Users/quangbd/Desktop/0_1607514663.416621.wav',
-                 '/Users/quangbd/Desktop/tmp.wav', back)
+    # back, _ = librosa.load('/Users/quangbd/Desktop/custom1_pi_noise.wav', sr=None)
+    # back = back[:16000]
+    # process_file('/Users/quangbd/Desktop/0_1607514663.416621.wav',
+    #              '/Users/quangbd/Desktop/tmp.wav', back)
+    augment_positive()

@@ -1,7 +1,4 @@
-import librosa
-import numpy as np
 from utils import *
-from glob import glob
 import tensorflow as tf
 from models import select_model
 from tensorflow.python.framework import graph_util
@@ -14,10 +11,8 @@ def checkpoint2pb():
         sess = tf.compat.v1.InteractiveSession()
 
         # model
-        wanted_words = args.wanted_words.split(',')
-        model = select_model(len(prepare_words_list(wanted_words)), window_size_ms=args.window_size_ms,
-                             window_stride_ms=args.window_stride_ms, dct_coefficient_count=args.dct_coefficient_count,
-                             name=args.model_architecture)
+        model = select_model(window_size_ms=args.window_size_ms, window_stride_ms=args.window_stride_ms,
+                             dct_coefficient_count=args.dct_coefficient_count, name=args.model_architecture)
         model_settings = model.prepare_model_settings()
         print('-----\nModel settings: {}'.format(model_settings))
         decoded_sample_data = tf.compat.v1.placeholder(tf.float32, [model_settings['sample_rate'], 1],
@@ -53,12 +48,12 @@ def checkpoint2pb():
 
         sess.close()
 
-    args = prepare_normal_config()
+    args = prepare_config()
     tf.compat.v1.app.run(main=_process)
 
 
 def pb2tflite():
-    args = prepare_normal_config()
+    args = prepare_config()
     converter = tf.compat.v1.lite.TFLiteConverter.from_frozen_graph(
         args.pb,
         input_arrays=['decoded_sample_data'],

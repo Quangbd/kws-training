@@ -3,8 +3,7 @@ import random
 import librosa
 import numpy as np
 from utils import *
-from config import *
-from tqdm import tqdm
+from constant import *
 from glob import glob
 import tensorflow as tf
 from data import AudioLoader
@@ -20,15 +19,13 @@ def test_batch():
         sess = tf.compat.v1.InteractiveSession()
 
         # model
-        wanted_words = args.wanted_words.split(',')
-        model = select_model(len(prepare_words_list(wanted_words)), window_size_ms=args.window_size_ms,
-                             window_stride_ms=args.window_stride_ms, dct_coefficient_count=args.dct_coefficient_count,
-                             name=args.model_architecture)
+        model = select_model(window_size_ms=args.window_size_ms, window_stride_ms=args.window_stride_ms,
+                             dct_coefficient_count=args.dct_coefficient_count, name=args.model_architecture)
         model_settings = model.prepare_model_settings()
         print('-----\nModel settings: {}'.format(model_settings))
 
-        audio_loader = AudioLoader(args.data_dir, wanted_words, SILENCE_PERCENTAGE, VOCAL_PERCENTAGE,
-                                   NEGATIVE_PERCENTAGE, VALIDATION_PERCENTAGE, TESTING_PERCENTAGE, model_settings)
+        audio_loader = AudioLoader(args.data_dir, args.silence_percentage, args.negative_percentage,
+                                                  args.validation_percentage, args.testing_percentage, model_settings)
         fingerprint_size = model_settings['fingerprint_size']
         label_count = model_settings['label_count']
         fingerprint_input = tf.compat.v1.placeholder(tf.float32, [None, fingerprint_size], name='fingerprint_input')
@@ -50,8 +47,7 @@ def test_batch():
         total_conf_matrix = None
         for i in range(0, test_size, args.batch_size):
             test_fingerprints, test_ground_truth = audio_loader \
-                .load_batch(sess, args.batch_size, offset=i, background_frequency=0,
-                            background_volume_range=0, time_shift=0, mode='testing')
+                .load_batch(sess, args.batch_size, offset=i, background_frequency=0, time_shift=0, mode='testing')
             test_accuracy, test_matrix = sess.run(
                 [evaluation_step, confusion_matrix],
                 feed_dict={fingerprint_input: test_fingerprints,
@@ -67,7 +63,7 @@ def test_batch():
         tf.compat.v1.logging.info('Final accuracy {}'.format(total_accuracy))
         sess.close()
 
-    args = prepare_normal_config()
+    args = prepare_config()
     tf.compat.v1.app.run(main=_process)
 
 
@@ -78,10 +74,8 @@ def test_checkpoint():
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
         sess = tf.compat.v1.InteractiveSession()
 
-        labels = prepare_words_list(args.wanted_words.split(','))
-        model = select_model(len(labels), window_size_ms=args.window_size_ms,
-                             window_stride_ms=args.window_stride_ms, dct_coefficient_count=args.dct_coefficient_count,
-                             name=args.model_architecture)
+        model = select_model(window_size_ms=args.window_size_ms, window_stride_ms=args.window_stride_ms,
+                             dct_coefficient_count=args.dct_coefficient_count, name=args.model_architecture)
         model_settings = model.prepare_model_settings()
         print('-----\nModel settings: {}\n-----'.format(model_settings))
 
@@ -108,10 +102,10 @@ def test_checkpoint():
             [in_predicted_results, in_predicted_indices],
             feed_dict={wav_filename_placeholder_: '/Users/quangbd/Desktop/output.wav'})
 
-        print('Result: {} {}'.format(labels[predicted_indices[0]], predicted_results[0][predicted_indices[0]]))
+        print('Result: {} {}'.format(predicted_indices[0], predicted_results[0][predicted_indices[0]]))
         sess.close()
 
-    args = prepare_normal_config()
+    args = prepare_config()
     tf.compat.v1.app.run(main=_process)
 
 
@@ -120,7 +114,7 @@ def test_pb():
                              sr=16000, duration=1)
     audio = np.reshape(audio, [16000, 1])
 
-    args = prepare_normal_config()
+    args = prepare_config()
     with tf.compat.v1.gfile.FastGFile(args.output_file, 'rb') as f:
         graph_def = tf.compat.v1.GraphDef()
     graph_def.ParseFromString(f.read())
@@ -129,8 +123,7 @@ def test_pb():
         softmax_tensor = sess.graph.get_tensor_by_name('labels_softmax:0')
         predictions = sess.run(softmax_tensor, {'decoded_sample_data:0': audio})[0]
         re_index = np.argmax(predictions)
-        labels = prepare_words_list(args.wanted_words.split(','))
-        print('Result: {} {}'.format(labels[re_index], predictions[re_index]))
+        print('Result: {} {}'.format(re_index, predictions[re_index]))
 
 
 def test_tflite():
@@ -173,7 +166,7 @@ def test_tflite():
         # print('-------')
 
 
-def test_tflite2():
+def test_tflite_large_file():
     interpreter = tf.lite.Interpreter(
         model_path='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1.tflite')
     input_details = interpreter.get_input_details()
@@ -205,4 +198,4 @@ if __name__ == '__main__':
     # test_batch()
     # test_checkpoint()
     # test_pb()
-    test_tflite2()
+    test_tflite_large_file()

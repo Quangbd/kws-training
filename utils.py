@@ -2,7 +2,7 @@ import re
 import os
 import hashlib
 import argparse
-from config import *
+from constant import *
 from tensorflow.python.util import compat
 
 
@@ -25,7 +25,7 @@ def which_set(filename, validation_percentage, testing_percentage):
     return result
 
 
-def prepare_normal_config():
+def prepare_config():
     parser = argparse.ArgumentParser(description='set input arguments')
     parser.add_argument('--data_dir',
                         type=str,
@@ -38,11 +38,11 @@ def prepare_normal_config():
     parser.add_argument('--window_size_ms',
                         type=float,
                         default=40.0,
-                        help='How long each spectrogram timeslice is.')
+                        help='How long each spectrogram time slice is.')
     parser.add_argument('--window_stride_ms',
                         type=float,
                         default=20.0,
-                        help='How long each spectrogram timeslice is.')
+                        help='How long each spectrogram time slice is.')
     parser.add_argument('--dct_coefficient_count',
                         type=int,
                         default=10,
@@ -65,35 +65,46 @@ def prepare_normal_config():
                         help='How many items to train with at once.')
     parser.add_argument('--summaries_dir',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/tmp_speech_commands_v0.02/train_logs',
+                        default='/Users/quangbd/Documents/data/model/kws/tmp/train_logs',
                         help='Where to save summary logs for TensorBoard.')
     parser.add_argument('--train_dir',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/tmp_speech_commands_v0.02/checkpoints',
+                        default='/Users/quangbd/Documents/data/model/kws/tmp/checkpoints',
                         help='Directory to write event logs and checkpoint.')
-    # parser.add_argument('--model_architecture',
-    #                     type=str,
-    #                     default='ds_cnn',
-    #                     help='What model architecture to use')
-    # parser.add_argument('--model_size_info',
-    #                     type=int,
-    #                     nargs="+",
-    #                     default=[6, 276, 10, 4, 2, 1, 276, 3, 3, 2, 2, 276, 3, 3, 1, 1,
-    #                              276, 3, 3, 1, 1, 276, 3, 3, 1, 1, 276, 3, 3, 1, 1],
-    #                     help='Model dimensions - different for various models.')
-    # parser.add_argument('--checkpoint',
-    #                     type=str,
-    #                     default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3/'
-    #                             'training/best/ds_cnn_9974.ckpt-52000',
-    #                     help='Checkpoint to load the weights from.')
-    # parser.add_argument('--pb',
-    #                     type=str,
-    #                     default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3.pb',
-    #                     help='Where to save the frozen graph.')
-    # parser.add_argument('--tflite',
-    #                     type=str,
-    #                     default='/Users/quangbd/Documents/data/model/kws/viet_nam/ds_cnn/ds_cnn3.tflite',
-    #                     help='Where to save the frozen graph.')
+
+    # For div train / test
+    parser.add_argument('--silence_percentage',
+                        type=int,
+                        default=500,
+                        help='How much of the training data should be silence.')
+    parser.add_argument('--negative_percentage',
+                        type=int,
+                        default=-1,
+                        help='How much of the training data should be negative, -1 for all.')
+    parser.add_argument('--validation_percentage',
+                        type=int,
+                        default=10,
+                        help='What percentage of wavs to use as a validation set.')
+    parser.add_argument('--testing_percentage',
+                        type=int,
+                        default=10,
+                        help='What percentage of wavs to use as a testing set.')
+
+    # For volume
+    parser.add_argument('--background_frequency',
+                        type=int,
+                        default=0.7,
+                        help='How many of the training samples have background noise mixed in.')
+    parser.add_argument('--background_silence_frequency',
+                        type=int,
+                        default=0.95,
+                        help='How many of the silence samples.')
+    parser.add_argument('--background_silence_volume',
+                        type=int,
+                        default=1,
+                        help='How loud of the silence samples.')
+
+    # For model
     parser.add_argument('--model_architecture',
                         type=str,
                         default='ds_cnn',
@@ -105,48 +116,18 @@ def prepare_normal_config():
                         help='Model dimensions - different for various models.')
     parser.add_argument('--checkpoint',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1/'
+                        default='/Users/quangbd/Documents/data/model/kws/tmp/ds_cnn/ds_cnn1/'
                                 'training/best/ds_cnn_9994.ckpt-56000',
                         help='Checkpoint to load the weights from.')
     parser.add_argument('--pb',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1.pb',
+                        default='/Users/quangbd/Documents/data/model/kws/tmp/ds_cnn/ds_cnn1.pb',
                         help='Where to save the frozen graph.')
     parser.add_argument('--tflite',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1.tflite',
+                        default='/Users/quangbd/Documents/data/model/kws/tmp/ds_cnn/ds_cnn1.tflite',
                         help='Where to save the frozen graph.')
-    # parser.add_argument('--model_architecture',
-    #                     type=str,
-    #                     default='crnn',
-    #                     help='What model architecture to use')
-    # parser.add_argument('--model_size_info',
-    #                     type=int,
-    #                     nargs="+",
-    #                     default=[48, 10, 4, 2, 2, 2, 60, 84],
-    #                     help='Model dimensions - different for various models.')
-    # parser.add_argument('--checkpoint',
-    #                     type=str,
-    #                     default='/Users/quangbd/Documents/data/model/kws/viet_nam/crnn/crnn1/'
-    #                             'training/best/crnn_9860.ckpt-3000',
-    #                     help='Checkpoint to load the weights from.')
-    # parser.add_argument('--pb',
-    #                     type=str,
-    #                     default='/Users/quangbd/Documents/data/model/kws/viet_nam/crnn/crnn1.pb',
-    #                     help='Where to save the frozen graph.')
-    # parser.add_argument('--tflite',
-    #                     type=str,
-    #                     default='/Users/quangbd/Documents/data/model/kws/viet_nam/crnn/crnn1.tflite',
-    #                     help='Where to save the frozen graph.')
-    return parser.parse_args()
-
-
-def prepare_record_config():
-    parser = argparse.ArgumentParser(description='set input arguments')
-    parser.add_argument('--model_path',
-                        type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/heyvf/backup/ds_cnn1_kws15_20201215.tflite',
-                        help='Tflite model path')
+    # For recorder
     parser.add_argument('--chunk_size',
                         type=int,
                         default=1024,
@@ -156,3 +137,4 @@ def prepare_record_config():
                         default=600,
                         help='Record time in seconds')
     return parser.parse_args()
+

@@ -1,7 +1,7 @@
 import random
 import numpy as np
 from utils import *
-from config import *
+from constant import *
 from tqdm import tqdm
 import tensorflow as tf
 from data import AudioLoader
@@ -22,8 +22,9 @@ def main(_):
     print('-----\nModel settings: {}'.format(model_settings))
 
     # data
-    audio_loader = AudioLoader(args.data_dir, args.augment_dir, SILENCE_PERCENTAGE, NEGATIVE_PERCENTAGE,
-                               VALIDATION_PERCENTAGE, TESTING_PERCENTAGE, model_settings)
+    audio_loader = AudioLoader(args.data_dir, args.silence_percentage, args.negative_percentage,
+                               args.validation_percentage, args.testing_percentage,
+                               model_settings, augment_dir=args.augment_dir)
 
     fingerprint_size = model_settings['fingerprint_size']
     label_count = model_settings['label_count']
@@ -93,11 +94,11 @@ def main(_):
 
             # train
             train_fingerprints, train_ground_truth = audio_loader \
-                .load_batch(sess, args.batch_size, offset,
-                            BACKGROUND_FREQUENCY, BACKGROUND_VOLUME,
-                            BACKGROUND_SILENCE_FREQUENCY, BACKGROUND_SILENCE_VOLUME,
-                            DOWN_VOLUME_FREQUENCY, DOWN_VOLUME_RANGE,
-                            time_shift_samples, mode='training')
+                .load_batch(sess, args.batch_size, offset=offset,
+                            background_frequency=args.background_frequency,
+                            background_silence_frequency=args.background_silence_frequency,
+                            background_silence_volume_range=args.background_silence_volume,
+                            time_shift=time_shift_samples, mode='training')
             train_summary, train_accuracy, cross_entropy_value, _, _ = sess.run(
                 [merged_summaries, evaluation_step, cross_entropy_mean, train_step, increment_global_step],
                 feed_dict={fingerprint_input: train_fingerprints,
@@ -116,7 +117,7 @@ def main(_):
                 for i in tqdm(range(0, val_size, args.batch_size)):
                     val_fingerprints, val_ground_truth = audio_loader \
                         .load_batch(sess, args.batch_size, offset=i, background_frequency=0,
-                                    background_volume_range=0, time_shift=0, mode='validation')
+                                    time_shift=0, mode='validation')
                     val_summary, val_accuracy, val_matrix = sess.run(
                         [merged_summaries, evaluation_step, confusion_matrix],
                         feed_dict={
@@ -152,7 +153,7 @@ def main(_):
     for i in tqdm(range(0, test_size, args.batch_size)):
         test_fingerprints, test_ground_truth = audio_loader \
             .load_batch(sess, args.batch_size, offset=i, background_frequency=0,
-                        background_volume_range=0, time_shift=0, mode='testing')
+                        time_shift=0, mode='testing')
         test_summary, test_accuracy, test_matrix = sess.run(
             [merged_summaries, evaluation_step, confusion_matrix],
             feed_dict={
@@ -173,5 +174,5 @@ def main(_):
 
 
 if __name__ == '__main__':
-    args = prepare_normal_config()
+    args = prepare_config()
     tf.compat.v1.app.run(main=main)

@@ -3,7 +3,7 @@ import sox
 import time
 import random
 import numpy as np
-from config import *
+from constant import *
 from tqdm import tqdm
 from glob import glob
 

@@ -1,5 +1,5 @@
 import math
-from config import *
+from constant import *
 import tf_slim as slim
 import tensorflow as tf
 

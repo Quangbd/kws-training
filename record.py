@@ -2,7 +2,7 @@ import time
 import pyaudio
 import numpy as np
 from utils import *
-from config import *
+from constant import *
 import tensorflow as tf
 from scipy.io.wavfile import write
 
@@ -13,7 +13,6 @@ def main():
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
     interpreter.allocate_tensors()
-    labels = prepare_words_list(args.wanted_words.split(','))
 
     # Init recoder
     p = pyaudio.PyAudio()
@@ -60,5 +59,5 @@ def main():
 
 
 if __name__ == '__main__':
-    args = prepare_record_config()
+    args = prepare_config()
     main()
