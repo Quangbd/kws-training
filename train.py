@@ -15,15 +15,14 @@ def main(_):
     sess = tf.compat.v1.InteractiveSession()
 
     # model
-    wanted_words = args.wanted_words.split(',')
-    model = select_model(len(prepare_words_list(wanted_words)), window_size_ms=args.window_size_ms,
-                         window_stride_ms=args.window_stride_ms, dct_coefficient_count=args.dct_coefficient_count,
+    model = select_model(window_size_ms=args.window_size_ms, window_stride_ms=args.window_stride_ms,
+                         dct_coefficient_count=args.dct_coefficient_count,
                          name=args.model_architecture)
     model_settings = model.prepare_model_settings()
     print('-----\nModel settings: {}'.format(model_settings))
 
     # data
-    audio_loader = AudioLoader(args.data_dir, wanted_words, SILENCE_PERCENTAGE, VOCAL_PERCENTAGE, NEGATIVE_PERCENTAGE,
+    audio_loader = AudioLoader(args.data_dir, args.augment_dir, SILENCE_PERCENTAGE, NEGATIVE_PERCENTAGE,
                                VALIDATION_PERCENTAGE, TESTING_PERCENTAGE, model_settings)
 
     fingerprint_size = model_settings['fingerprint_size']

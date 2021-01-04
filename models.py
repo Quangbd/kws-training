@@ -4,9 +4,9 @@ import tf_slim as slim
 import tensorflow as tf
 
 
-def select_model(label_count, window_size_ms, window_stride_ms, dct_coefficient_count,
+def select_model(window_size_ms, window_stride_ms, dct_coefficient_count,
                  sample_rate=SAMPLE_RATE, clip_duration_ms=CLIP_DURATION_MS, name='dnn'):
-    config = label_count, sample_rate, clip_duration_ms, window_size_ms, window_stride_ms, dct_coefficient_count
+    config = 2, sample_rate, clip_duration_ms, window_size_ms, window_stride_ms, dct_coefficient_count
     if name == 'single_fc':
         return SingleFC(config)
     elif name == 'dnn':

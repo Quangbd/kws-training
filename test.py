@@ -9,6 +9,7 @@ from glob import glob
 import tensorflow as tf
 from data import AudioLoader
 from models import select_model
+from scipy.io.wavfile import write
 
 
 def test_batch():
@@ -141,31 +142,67 @@ def test_tflite():
     print(output_details)
     interpreter.allocate_tensors()
 
-    for file in glob('/Users/quangbd/Desktop/record/*.wav'):
-        try:
-            audio, sr = librosa.load(file, sr=16000, duration=1)
-            audio = np.reshape(audio, [16000, 1])
-            input_data = np.array(audio, dtype=np.float32)
-            interpreter.set_tensor(input_details[0]['index'], input_data)
-            interpreter.invoke()
-            output_data = interpreter.get_tensor(output_details[0]['index'])[0]
-            print(output_data)
-            # re_index = np.argmax(output_data)
-            # args = prepare_normal_config()
-            # labels = prepare_words_list(args.wanted_words.split(','))
-            # score = output_data[re_index]
-            # label = labels[re_index]
-            # print(label)
-            # if label == 'viet_nam' and score < 0.6:
-            # print(file)
-            # print('Result: {} {}'.format(label, score))
-            # print('-------')
-        except:
-            pass
+    for file in glob('/Users/quangbd/Downloads/soundcore/*.wav'):
+        print(file)
+        tmp_audio = np.random.uniform(low=0.0001, high=0.0005, size=(16000,))
+        audio, sr = librosa.load(file, sr=16000, duration=1)
+        if len(audio) < 16000:
+            tmp_audio[:len(audio)] = audio
+        else:
+            tmp_audio[:] = audio[:16000]
+        audio = tmp_audio
+        audio = np.reshape(audio, [16000, 1])
+        input_data = np.array(audio, dtype=np.float32)
+        start = time.time()
+        interpreter.set_tensor(input_details[0]['index'], input_data)
+        interpreter.invoke()
+        output_data = interpreter.get_tensor(output_details[0]['index'])[0]
+        print(time.time() - start)
+        print(output_data)
+        write('/Users/quangbd/Desktop/tmp/{}.wav'.format(time.time()), 16000, audio)
+
+        # re_index = np.argmax(output_data)
+        # args = prepare_normal_config()
+        # labels = prepare_words_list(args.wanted_words.split(','))
+        # score = output_data[re_index]
+        # label = labels[re_index]
+        # print(label)
+        # if label == 'viet_nam' and score < 0.6:
+        # print(file)
+        # print('Result: {} {}'.format(label, score))
+        # print('-------')
+
+
+def test_tflite2():
+    interpreter = tf.lite.Interpreter(
+        model_path='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1.tflite')
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+    print(input_details)
+    print(output_details)
+    interpreter.allocate_tensors()
+
+    for file in glob('/Users/quangbd/Desktop/*.wav'):
+        print(file)
+        audio, sr = librosa.load(file, sr=16000)
+        for i in range(0, len(audio), 512):
+            input_buffer = audio[i:i + 16000]
+            if len(input_buffer) == 16000:
+                input_buffer = np.reshape(input_buffer, [16000, 1])
+                input_data = np.array(input_buffer, dtype=np.float32)
+                start = time.time()
+                interpreter.set_tensor(input_details[0]['index'], input_data)
+                interpreter.invoke()
+                output_data = interpreter.get_tensor(output_details[0]['index'])[0]
+                if output_data[1] > output_data[0]:
+                    print(time.time() - start)
+                    print(output_data)
+                    write('/Users/quangbd/Desktop/tmp/{}_{}_{}.wav'
+                          .format(time.time(), int(output_data[1] * 100), i / 16000), 16000, input_buffer)
 
 
 if __name__ == '__main__':
     # test_batch()
     # test_checkpoint()
     # test_pb()
-    test_tflite()
+    test_tflite2()

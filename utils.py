@@ -6,10 +6,6 @@ from config import *
 from tensorflow.python.util import compat
 
 
-def prepare_words_list(wanted_words):
-    return [NEGATIVE_WORD_LABEL] + wanted_words
-
-
 def which_set(filename, validation_percentage, testing_percentage):
     base_name = os.path.basename(filename)
 
@@ -33,7 +29,11 @@ def prepare_normal_config():
     parser = argparse.ArgumentParser(description='set input arguments')
     parser.add_argument('--data_dir',
                         type=str,
-                        default='/Users/quangbd/Documents/data/kws-data/viet_nam_20201103/',
+                        default='/Users/quangbd/Documents/data/kws/train/',
+                        help='Where to download the speech training data to.')
+    parser.add_argument('--augment_dir',
+                        type=str,
+                        default='/Users/quangbd/Documents/data/kws/tmp/',
                         help='Where to download the speech training data to.')
     parser.add_argument('--window_size_ms',
                         type=float,
@@ -71,10 +71,6 @@ def prepare_normal_config():
                         type=str,
                         default='/Users/quangbd/Documents/data/model/kws/tmp_speech_commands_v0.02/checkpoints',
                         help='Directory to write event logs and checkpoint.')
-    parser.add_argument('--wanted_words',
-                        type=str,
-                        default='heyvf',
-                        help='Words to use (others will be added to an unknown label).', )
     # parser.add_argument('--model_architecture',
     #                     type=str,
     #                     default='ds_cnn',
@@ -151,10 +147,6 @@ def prepare_record_config():
                         type=str,
                         default='/Users/quangbd/Documents/data/model/kws/heyvf/backup/ds_cnn1_kws15_20201215.tflite',
                         help='Tflite model path')
-    parser.add_argument('--wanted_words',
-                        type=str,
-                        default='heyvf',
-                        help='Words to use (others will be added to an unknown label).')
     parser.add_argument('--chunk_size',
                         type=int,
                         default=1024,
