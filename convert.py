@@ -1,20 +1,13 @@
 from utils import *
 import tensorflow as tf
-from models import select_model
+from train import init_session, init_model
 from tensorflow.python.framework import graph_util
 
 
 def checkpoint2pb():
     def _process(_):
-        tf.compat.v1.disable_eager_execution()
-        tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
-        sess = tf.compat.v1.InteractiveSession()
-
-        # model
-        model = select_model(window_size_ms=args.window_size_ms, window_stride_ms=args.window_stride_ms,
-                             dct_coefficient_count=args.dct_coefficient_count, name=args.model_architecture)
-        model_settings = model.prepare_model_settings()
-        print('-----\nModel settings: {}'.format(model_settings))
+        sess = init_session()
+        model, model_settings = init_model()
         decoded_sample_data = tf.compat.v1.placeholder(tf.float32, [model_settings['sample_rate'], 1],
                                                        name='decoded_sample_data')
         spectrogram = tf.raw_ops.AudioSpectrogram(input=decoded_sample_data,

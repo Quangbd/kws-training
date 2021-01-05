@@ -1,44 +1,23 @@
 import time
-import random
 import librosa
 import numpy as np
 from utils import *
-from constant import *
 from glob import glob
 import tensorflow as tf
-from data import AudioLoader
-from models import select_model
 from scipy.io.wavfile import write
+from train import init_session, init_model, init_data, init_placeholder, init_graph
 
 
 def test_batch():
     def _process(_):
-        random.seed(RANDOM_SEED)
-        tf.compat.v1.disable_eager_execution()
-        tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
-        sess = tf.compat.v1.InteractiveSession()
+        sess = init_session()
+        model, model_settings = init_model()
+        audio_loader = init_data(model_settings)
 
-        # model
-        model = select_model(window_size_ms=args.window_size_ms, window_stride_ms=args.window_stride_ms,
-                             dct_coefficient_count=args.dct_coefficient_count, name=args.model_architecture)
-        model_settings = model.prepare_model_settings()
-        print('-----\nModel settings: {}'.format(model_settings))
-
-        audio_loader = AudioLoader(args.data_dir, args.silence_percentage, args.negative_percentage,
-                                                  args.validation_percentage, args.testing_percentage, model_settings)
-        fingerprint_size = model_settings['fingerprint_size']
-        label_count = model_settings['label_count']
-        fingerprint_input = tf.compat.v1.placeholder(tf.float32, [None, fingerprint_size], name='fingerprint_input')
-
-        ground_truth_input = tf.compat.v1.placeholder(tf.float32, [None, label_count], name='groundtruth_input')
-        logits, dropout_prob = model.forward(fingerprint_input, args.model_size_info)
-
-        predicted_indices = tf.argmax(logits, 1)
-        expected_indices = tf.argmax(ground_truth_input, 1)
-        correct_prediction = tf.equal(predicted_indices, expected_indices)
-        confusion_matrix = tf.math.confusion_matrix(expected_indices, predicted_indices, num_classes=label_count)
-        evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        model.load_variables_from_checkpoint(sess, args.checkpoint)
+        time_shift_samples, _, _, fingerprint_input, ground_truth_input = init_placeholder(model_settings,
+                                                                                           is_train=False)
+        evaluation_step, _, _, _, confusion_matrix, dropout_prob = \
+            init_graph(model, model_settings, fingerprint_input, ground_truth_input)
 
         # test set
         test_size = audio_loader.size('testing')
@@ -69,15 +48,8 @@ def test_batch():
 
 def test_checkpoint():
     def _process(_):
-        random.seed(RANDOM_SEED)
-        tf.compat.v1.disable_eager_execution()
-        tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
-        sess = tf.compat.v1.InteractiveSession()
-
-        model = select_model(window_size_ms=args.window_size_ms, window_stride_ms=args.window_stride_ms,
-                             dct_coefficient_count=args.dct_coefficient_count, name=args.model_architecture)
-        model_settings = model.prepare_model_settings()
-        print('-----\nModel settings: {}\n-----'.format(model_settings))
+        sess = init_session()
+        model, model_settings = init_model()
 
         wav_filename_placeholder_ = tf.compat.v1.placeholder(tf.string, [])
         wav_loader = tf.io.read_file(wav_filename_placeholder_)

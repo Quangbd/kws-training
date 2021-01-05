@@ -8,7 +8,6 @@ import os
 import time
 import torch
 import random
-import librosa
 import augment
 import torchaudio
 import numpy as np
@@ -88,9 +87,10 @@ def augmentation_factory(methods, background_noise, sampling_rate=16_000, total_
     return chain
 
 
-def process_file(file_path, output_dir, background_noise=None, file_name=None):
+def process_file(file_path, output_dir, background_noise=None, file_name=None, min_no_chain=0):
     """
     Process wav file by chains
+    :param min_no_chain: Min number of chains
     :param file_name: Optional for file name
     :param file_path: Input path
     :param output_dir: Output directory path
@@ -98,7 +98,7 @@ def process_file(file_path, output_dir, background_noise=None, file_name=None):
     :return: Save to a wav file, output path
     """
     chains = ['pitch', 'reverb', 'clip']
-    number_method_random = random.randint(0, len(chains))
+    number_method_random = random.randint(min_no_chain, len(chains))
     methods = []
     if background_noise is not None:
         methods.append('noise')
@@ -107,7 +107,8 @@ def process_file(file_path, output_dir, background_noise=None, file_name=None):
         methods.append(chains[random_index])
         chains.pop(random_index)
     x, sampling_rate = torchaudio.load(file_path)
-    augmentation_chain = augmentation_factory(methods, background_noise, total_sample=x.shape[1])
+    total_sample = x.shape[1]
+    augmentation_chain = augmentation_factory(methods, background_noise, total_sample=total_sample)
     y = augmentation_chain.apply(x, src_info=dict(rate=sampling_rate, length=x.size(1), channels=x.size(0)),
                                  target_info=dict(rate=sampling_rate, length=0))
     if not os.path.exists(output_dir):
@@ -116,36 +117,22 @@ def process_file(file_path, output_dir, background_noise=None, file_name=None):
         output_path = os.path.join(output_dir, '{}_{}_{}.wav'.format(file_name, '_'.join(methods), time.time()))
     else:
         output_path = os.path.join(output_dir, '{}_{}.wav'.format('_'.join(methods), time.time()))
-    if y.numel() > 16000:
-        y = y[:, :16000]
-        print(output_path)
+    if y.numel() > total_sample:
+        y = y[:, :total_sample]
     torchaudio.save(output_path, y, sampling_rate)
     return output_path
 
 
-def augment_positive(total_sample=16_000, limit=5000):
-    # get background noise
-    background_all_data = []
-    for background_noise_file in glob('/Users/quangbd/Documents/data/kws/train/background_noise/*.wav'):
-        background_all_data.append(librosa.load(background_noise_file, sr=None)[0])
-
+def augment_positive(limit=5000):
     count = 0
     while True:
         for file in glob('/Users/quangbd/Documents/data/kws/train/keyword/*.wav'):
-            background_index = random.randint(0, len(background_all_data) - 1)
-            background_data = background_all_data[background_index]
-            random_index = random.randint(0, len(background_data) - total_sample - 1)
-            noise = background_data[random_index:random_index + total_sample]
-            process_file(file, '/Users/quangbd/Documents/data/kws/train/augment_positive', noise,
-                         file.split('/')[-1].split('_')[0])
+            process_file(file, '/Users/quangbd/Documents/data/kws/train/augment_positive', None,
+                         file.split('/')[-1].split('_')[0], min_no_chain=1)
             count += 1
         if count > limit:
             break
 
 
 if __name__ == '__main__':
-    # back, _ = librosa.load('/Users/quangbd/Desktop/custom1_pi_noise.wav', sr=None)
-    # back = back[:16000]
-    # process_file('/Users/quangbd/Desktop/0_1607514663.416621.wav',
-    #              '/Users/quangbd/Desktop/tmp.wav', back)
     augment_positive()

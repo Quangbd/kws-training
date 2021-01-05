@@ -8,51 +8,77 @@ from data import AudioLoader
 from models import select_model
 
 
-def main(_):
+def init_session():
     random.seed(RANDOM_SEED)
     tf.compat.v1.disable_eager_execution()
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
     sess = tf.compat.v1.InteractiveSession()
+    return sess
 
-    # model
+
+def init_model():
     model = select_model(window_size_ms=args.window_size_ms, window_stride_ms=args.window_stride_ms,
                          dct_coefficient_count=args.dct_coefficient_count,
                          name=args.model_architecture)
     model_settings = model.prepare_model_settings()
     print('-----\nModel settings: {}'.format(model_settings))
+    return model, model_settings
 
-    # data
-    audio_loader = AudioLoader(args.data_dir, args.silence_percentage, args.negative_percentage,
-                               args.validation_percentage, args.testing_percentage,
-                               model_settings, augment_dir=args.augment_dir)
 
+def init_data(model_settings):
+    return AudioLoader(args.data_dir, args.silence_percentage, args.negative_percentage,
+                       args.validation_percentage, args.testing_percentage,
+                       model_settings, augment_dir=args.augment_dir)
+
+
+def init_placeholder(model_settings, is_train=True):
+    time_shift_samples = None
+    training_steps_list = None
+    learning_rates_list = None
     fingerprint_size = model_settings['fingerprint_size']
-    label_count = model_settings['label_count']
-    time_shift_samples = int((TIME_SHIFT_MS * model_settings['sample_rate']) / 1000)
-    training_steps_list = list(map(int, args.training_steps.split(',')))
-    learning_rates_list = list(map(float, args.learning_rate.split(',')))
-
+    if is_train:
+        time_shift_samples = int((TIME_SHIFT_MS * model_settings['sample_rate']) / 1000)
+        training_steps_list = list(map(int, args.training_steps.split(',')))
+        learning_rates_list = list(map(float, args.learning_rate.split(',')))
     fingerprint_input = tf.compat.v1.placeholder(tf.float32, [None, fingerprint_size], name='fingerprint_input')
-    ground_truth_input = tf.compat.v1.placeholder(tf.float32, [None, label_count], name='groundtruth_input')
+    ground_truth_input = tf.compat.v1.placeholder(tf.float32, [None, model_settings['label_count']],
+                                                  name='groundtruth_input')
+    return time_shift_samples, training_steps_list, learning_rates_list, fingerprint_input, ground_truth_input
+
+
+def init_graph(model, model_settings, fingerprint_input, ground_truth_input, is_train=True):
     logits, dropout_prob = model.forward(fingerprint_input, args.model_size_info)
 
-    # Create the back propagation and training evaluation machinery in the graph.
-    with tf.name_scope('cross_entropy'):
-        cross_entropy_mean = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-            labels=ground_truth_input, logits=logits))
-    tf.compat.v1.summary.scalar('cross_entropy', cross_entropy_mean)
+    if is_train:
+        # Create the back propagation and training evaluation machinery in the graph.
+        with tf.name_scope('cross_entropy'):
+            cross_entropy_mean = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+                labels=ground_truth_input, logits=logits))
+        tf.compat.v1.summary.scalar('cross_entropy', cross_entropy_mean)
 
-    update_ops = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS)
-    with tf.name_scope('train'), tf.control_dependencies(update_ops):
-        learning_rate_input = tf.compat.v1.placeholder(tf.float32, [], name='learning_rate_input')
-        train_step = tf.compat.v1.train.AdamOptimizer(learning_rate_input).minimize(cross_entropy_mean)
+        update_ops = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS)
+        with tf.name_scope('train'), tf.control_dependencies(update_ops):
+            learning_rate_input = tf.compat.v1.placeholder(tf.float32, [], name='learning_rate_input')
+            train_step = tf.compat.v1.train.AdamOptimizer(learning_rate_input).minimize(cross_entropy_mean)
 
     predicted_indices = tf.argmax(logits, 1)
     expected_indices = tf.argmax(ground_truth_input, 1)
     correct_prediction = tf.equal(predicted_indices, expected_indices)
-    confusion_matrix = tf.math.confusion_matrix(expected_indices, predicted_indices, num_classes=label_count)
+    confusion_matrix = tf.math.confusion_matrix(expected_indices, predicted_indices,
+                                                num_classes=model_settings['label_count'])
     evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     tf.compat.v1.summary.scalar('accuracy', evaluation_step)
+    return evaluation_step, cross_entropy_mean, train_step, learning_rate_input, confusion_matrix, dropout_prob
+
+
+def main(_):
+    sess = init_session()
+    model, model_settings = init_model()
+    audio_loader = init_data(model_settings)
+    time_shift_samples, training_steps_list, learning_rates_list, fingerprint_input, ground_truth_input = \
+        init_placeholder(model_settings)
+    evaluation_step, cross_entropy_mean, train_step, learning_rate_input, confusion_matrix, dropout_prob = \
+        init_graph(model, model_settings, fingerprint_input, ground_truth_input)
 
     global_step = tf.compat.v1.train.get_or_create_global_step()
     increment_global_step = tf.compat.v1.assign(global_step, global_step + 1)
