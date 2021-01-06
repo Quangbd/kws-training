@@ -72,7 +72,7 @@ def test_checkpoint():
 
         predicted_results, predicted_indices = sess.run(
             [in_predicted_results, in_predicted_indices],
-            feed_dict={wav_filename_placeholder_: '/Users/quangbd/Desktop/output.wav'})
+            feed_dict={wav_filename_placeholder_: 'tmp.wav'})
 
         print('Result: {} {}'.format(predicted_indices[0], predicted_results[0][predicted_indices[0]]))
         sess.close()
@@ -82,7 +82,7 @@ def test_checkpoint():
 
 
 def test_pb():
-    audio, sr = librosa.load('/Users/quangbd/Documents/data/kws-data/speech_commands_v0.02/go/0b7ee1a0_nohash_0.wav',
+    audio, sr = librosa.load('tmp.wav',
                              sr=16000, duration=1)
     audio = np.reshape(audio, [16000, 1])
 
@@ -99,8 +99,7 @@ def test_pb():
 
 
 def test_tflite():
-    interpreter = tf.lite.Interpreter(
-        model_path='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1.tflite')
+    interpreter = tf.lite.Interpreter(model_path=args.tflite)
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
     print(input_details)
@@ -139,8 +138,7 @@ def test_tflite():
 
 
 def test_tflite_large_file():
-    interpreter = tf.lite.Interpreter(
-        model_path='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1.tflite')
+    interpreter = tf.lite.Interpreter(model_path=args.tflite)
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
     print(input_details)
@@ -170,4 +168,5 @@ if __name__ == '__main__':
     # test_batch()
     # test_checkpoint()
     # test_pb()
+    args = prepare_config()
     test_tflite_large_file()

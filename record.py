@@ -9,7 +9,7 @@ from scipy.io.wavfile import write
 
 def main():
     # Init model
-    interpreter = tf.lite.Interpreter(model_path=args.model_path)
+    interpreter = tf.lite.Interpreter(model_path=args.tflite)
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
     interpreter.allocate_tensors()
