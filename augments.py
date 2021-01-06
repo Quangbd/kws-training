@@ -88,9 +88,10 @@ def augmentation_factory(methods, background_noise, sampling_rate=16_000, total_
     return chain
 
 
-def process_file(file_path, output_dir, background_noise=None, file_name=None, min_no_chain=0):
+def process_file(file_path, output_dir, background_noise=None, file_name=None, min_no_chain=0, max_no_chain=3):
     """
     Process wav file by chains
+    :param max_no_chain: Max number of chains
     :param min_no_chain: Min number of chains
     :param file_name: Optional for file name
     :param file_path: Input path
@@ -99,7 +100,9 @@ def process_file(file_path, output_dir, background_noise=None, file_name=None, m
     :return: Save to a wav file, output path
     """
     chains = ['pitch', 'reverb', 'clip']
-    number_method_random = random.randint(min_no_chain, len(chains))
+    if max_no_chain > len(chains):
+        print('Max no chains error')
+    number_method_random = random.randint(min_no_chain, max_no_chain)
     methods = []
     if background_noise is not None:
         methods.append('noise')
@@ -126,7 +129,7 @@ def process_file(file_path, output_dir, background_noise=None, file_name=None, m
     return output_path
 
 
-def augment_positive(limit=5000):
+def augment_positive(limit=10_000):
     count = 0
     while True:
         for file in glob('/Users/quangbd/Documents/data/kws/train/keyword/*.wav'):

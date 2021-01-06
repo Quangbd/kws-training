@@ -25,7 +25,7 @@ def test_batch():
         total_accuracy = 0
         total_conf_matrix = None
         for i in range(0, test_size, args.batch_size):
-            test_fingerprints, test_ground_truth = audio_loader \
+            test_fingerprints, test_ground_truth, _, _ = audio_loader \
                 .load_batch(sess, args.batch_size, offset=i, background_frequency=0, time_shift=0, mode='testing')
             test_accuracy, test_matrix = sess.run(
                 [evaluation_step, confusion_matrix],

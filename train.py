@@ -119,7 +119,7 @@ def main(_):
                     break
 
             # train
-            train_fingerprints, train_ground_truth = audio_loader \
+            train_fingerprints, train_ground_truth, positive_count, negative_count = audio_loader \
                 .load_batch(sess, args.batch_size, offset=offset,
                             background_frequency=args.background_frequency,
                             background_silence_frequency=args.background_silence_frequency,
@@ -132,8 +132,9 @@ def main(_):
                            learning_rate_input: learning_rate_value,
                            dropout_prob: 1.0})
             train_writer.add_summary(train_summary, step)
-            print('Epoch {} - Step {}: train accuracy {}, cross entropy {}, lr {}'.format(
-                epoch, step, train_accuracy * 100, cross_entropy_value, learning_rate_value))
+            print('Epoch {} - Step {}: train accuracy {}, cross entropy {}, lr {}, positive {}, negative {}'
+                  .format(epoch, step, train_accuracy * 100, cross_entropy_value,
+                          learning_rate_value, positive_count, negative_count))
 
             # val
             if step % args.eval_step_interval == 0:
@@ -141,7 +142,7 @@ def main(_):
                 val_size = audio_loader.size('validation')
                 total_conf_matrix = None
                 for i in tqdm(range(0, val_size, args.batch_size)):
-                    val_fingerprints, val_ground_truth = audio_loader \
+                    val_fingerprints, val_ground_truth, _, _ = audio_loader \
                         .load_batch(sess, args.batch_size, offset=i, background_frequency=0,
                                     time_shift=0, mode='validation')
                     val_summary, val_accuracy, val_matrix = sess.run(
@@ -177,7 +178,7 @@ def main(_):
     total_accuracy = 0
     total_conf_matrix = None
     for i in tqdm(range(0, test_size, args.batch_size)):
-        test_fingerprints, test_ground_truth = audio_loader \
+        test_fingerprints, test_ground_truth, _, _ = audio_loader \
             .load_batch(sess, args.batch_size, offset=i, background_frequency=0,
                         time_shift=0, mode='testing')
         test_summary, test_accuracy, test_matrix = sess.run(

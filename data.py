@@ -242,7 +242,7 @@ class AudioLoader:
                     background_volume = 0
                     augment_output = augments.process_file(sample['file'],
                                                            os.path.join(self.augment_dir, sample_label),
-                                                           background_noise=background_reshaped)
+                                                           background_noise=background_reshaped, max_no_chain=0)
                     input_dict[self.mfcc_input_['wav_filename_placeholder_']] = augment_output
                 else:
                     background_volume = 0
@@ -275,8 +275,7 @@ class AudioLoader:
             labels[i - offset, label_index] = 1
             if augment_output:
                 os.remove(augment_output)
-        print('Positive: {} - Negative: {}'.format(positive_count, negative_count))
-        return data, labels
+        return data, labels, positive_count, negative_count
 
     def size(self, mode='training'):
         return len(self.data_index[mode])
