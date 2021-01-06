@@ -1,11 +1,12 @@
 import os
 import math
-import utils
 import random
+import hashlib
 import augments
 import numpy as np
 from constant import *
 import tensorflow as tf
+from tensorflow.python.util import compat
 
 
 class AudioLoader:
@@ -27,6 +28,25 @@ class AudioLoader:
         self.prepare_background_data()
         self.mfcc_input_, self.mfcc_ = self.prepare_processing_graph()
 
+    @staticmethod
+    def which_set(filename, word, validation_percentage, testing_percentage):
+        base_name = os.path.basename(filename)
+
+        if word == KEYWORD_LABEL or word == AUGMENT_POSITIVE_LABEL:
+            hash_name = base_name.split('_')[0]
+        else:
+            hash_name = base_name
+        hash_name_hashed = hashlib.sha1(compat.as_bytes(hash_name)).hexdigest()
+        percentage_hash = ((int(hash_name_hashed, 16) % (MAX_NUM_WAVS_PER_CLASS + 1))
+                           * (100.0 / MAX_NUM_WAVS_PER_CLASS))
+        if percentage_hash < validation_percentage:
+            result = 'validation'
+        elif percentage_hash < (testing_percentage + validation_percentage):
+            result = 'testing'
+        else:
+            result = 'training'
+        return result
+
     def prepare_data_index(self):
         negative_index = {'validation': [], 'testing': [], 'training': []}
         real_negative_index = {'validation': [], 'testing': [], 'training': []}
@@ -40,7 +60,7 @@ class AudioLoader:
             if word == BACKGROUND_NOISE_DIR_NAME:
                 continue
             all_words[word] = True
-            set_index = utils.which_set(wav_path, self.validation_percentage, self.testing_percentage)
+            set_index = self.which_set(wav_path, word, self.validation_percentage, self.testing_percentage)
             if word == KEYWORD_LABEL or word == AUGMENT_POSITIVE_LABEL:
                 self.data_index[set_index].append({'label': word, 'file': wav_path})
             elif word == VOCAL_WORD_LABEL:
@@ -166,6 +186,9 @@ class AudioLoader:
                    background_silence_volume_range=0,
                    down_volume_frequency=0, down_volume_range=0,
                    time_shift=0, mode='training'):
+        positive_count = 0
+        negative_count = 0
+
         # Pick one of the partitions to choose samples from.
         candidates = self.data_index[mode]
         if batch_size == -1:
@@ -245,9 +268,14 @@ class AudioLoader:
             # Run the graph to produce the output audio.
             data[i - offset, :] = sess.run(self.mfcc_, feed_dict=input_dict).flatten()
             label_index = self.word_to_index[sample['label']]
+            if label_index == POSITIVE_WORD_INDEX:
+                positive_count += 1
+            else:
+                negative_count += 1
             labels[i - offset, label_index] = 1
-            # if augment_output:
-            #     os.remove(augment_output)
+            if augment_output:
+                os.remove(augment_output)
+        print('Positive: {} - Negative: {}'.format(positive_count, negative_count))
         return data, labels
 
     def size(self, mode='training'):

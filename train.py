@@ -1,3 +1,4 @@
+import os
 import random
 import numpy as np
 from utils import *
@@ -11,7 +12,6 @@ from models import select_model
 def init_session():
     random.seed(RANDOM_SEED)
     tf.compat.v1.disable_eager_execution()
-    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
     sess = tf.compat.v1.InteractiveSession()
     return sess
 
@@ -132,7 +132,7 @@ def main(_):
                            learning_rate_input: learning_rate_value,
                            dropout_prob: 1.0})
             train_writer.add_summary(train_summary, step)
-            tf.compat.v1.logging.info('Epoch {} - Step {}: train accuracy {}, cross entropy {}, lr {}'.format(
+            print('Epoch {} - Step {}: train accuracy {}, cross entropy {}, lr {}'.format(
                 epoch, step, train_accuracy * 100, cross_entropy_value, learning_rate_value))
 
             # val
@@ -157,8 +157,8 @@ def main(_):
                         total_conf_matrix = val_matrix
                     else:
                         total_conf_matrix += val_matrix
-                tf.compat.v1.logging.info('Confusion matrix: \n %s' % total_conf_matrix)
-                tf.compat.v1.logging.info('Step {}: val accuracy {}'.format(step, total_accuracy))
+                print('Confusion matrix: \n %s' % total_conf_matrix)
+                print('Step {}: val accuracy {}'.format(step, total_accuracy))
 
                 # Save the model checkpoint when validation accuracy improves
                 if total_accuracy >= best_accuracy:
@@ -167,13 +167,13 @@ def main(_):
                         args.train_dir, 'best',
                         '{}_{}.ckpt'.format(args.model_architecture, str(int(best_accuracy * 10000))))
                     saver.save(sess, checkpoint_path, global_step=step)
-                    tf.compat.v1.logging.info('Saving best model to {} - step {}'.format(checkpoint_path, step))
-                tf.compat.v1.logging.info('So far the best validation accuracy is %.2f%%' % (best_accuracy * 100))
+                    print('Saving best model to {} - step {}'.format(checkpoint_path, step))
+                print('So far the best validation accuracy is %.2f%%' % (best_accuracy * 100))
 
     # test
     print('Testing')
     test_size = audio_loader.size(mode='testing')
-    tf.compat.v1.logging.info('set_size=%d', test_size)
+    print('set_size=%d', test_size)
     total_accuracy = 0
     total_conf_matrix = None
     for i in tqdm(range(0, test_size, args.batch_size)):
@@ -192,8 +192,8 @@ def main(_):
             total_conf_matrix = test_matrix
         else:
             total_conf_matrix += test_matrix
-    tf.compat.v1.logging.info('Final confusion matrix: \n %s' % total_conf_matrix)
-    tf.compat.v1.logging.info('Final accuracy {}'.format(total_accuracy))
+    print('Final confusion matrix: \n %s' % total_conf_matrix)
+    print('Final accuracy {}'.format(total_accuracy))
 
     # close
     sess.close()

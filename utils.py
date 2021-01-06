@@ -1,28 +1,4 @@
-import re
-import os
-import hashlib
 import argparse
-from constant import *
-from tensorflow.python.util import compat
-
-
-def which_set(filename, validation_percentage, testing_percentage):
-    base_name = os.path.basename(filename)
-
-    # We want to ignore anything after '_nohash_' in the file name when
-    # deciding which set to put a wav in, so the data set creator has a way of
-    # grouping wavs that are close variations of each other.
-    hash_name = re.sub(r'_nohash_.*$', '', base_name)
-    hash_name_hashed = hashlib.sha1(compat.as_bytes(hash_name)).hexdigest()
-    percentage_hash = ((int(hash_name_hashed, 16) % (MAX_NUM_WAVS_PER_CLASS + 1))
-                       * (100.0 / MAX_NUM_WAVS_PER_CLASS))
-    if percentage_hash < validation_percentage:
-        result = 'validation'
-    elif percentage_hash < (testing_percentage + validation_percentage):
-        result = 'testing'
-    else:
-        result = 'training'
-    return result
 
 
 def prepare_config():

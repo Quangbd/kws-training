@@ -12,6 +12,7 @@ import augment
 import torchaudio
 import numpy as np
 from glob import glob
+import torch.nn.functional as F
 from dataclasses import dataclass
 
 
@@ -119,6 +120,8 @@ def process_file(file_path, output_dir, background_noise=None, file_name=None, m
         output_path = os.path.join(output_dir, '{}_{}.wav'.format('_'.join(methods), time.time()))
     if y.numel() > total_sample:
         y = y[:, :total_sample]
+    elif y.numel() < total_sample:
+        y = F.pad(y, (0, total_sample - y.numel()), mode='constant', value=0)
     torchaudio.save(output_path, y, sampling_rate)
     return output_path
 
