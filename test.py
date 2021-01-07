@@ -64,9 +64,11 @@ def run(args, model_type):
             latency_total += time.time() - start
             latency_count += 1
             if POSITIVE_LABEL in file and result[1] > result[0]:
+                print('Positive {} - result {} - {}'.format(file, result[0], result[1]))
                 positive_count += 1
                 break
             elif NEGATIVE_LABEL in file and result[1] > result[0]:
+                print('Negative {} - result {} - {}'.format(file, result[0], result[1]))
                 negative_count += 1
                 break
             if i + desired_samples == wav_len:

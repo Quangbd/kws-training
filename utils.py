@@ -172,7 +172,7 @@ def prepare_config():
     parser.add_argument('--checkpoint',
                         type=str,
                         default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1/'
-                                'training/best/ds_cnn_9994.ckpt-56000',
+                                'training/best/ds_cnn_9964.ckpt-43000',
                         help='Checkpoint to load the weights from.')
     parser.add_argument('--pb',
                         type=str,
@@ -199,7 +199,7 @@ def prepare_config():
                         help='Where to save test data.')
     parser.add_argument('--test_model_type',
                         type=str,
-                        default='tflite',
+                        default='pb',
                         help='Model type for test.')
 
     return parser.parse_args()
