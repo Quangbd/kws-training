@@ -1,52 +1,29 @@
+import os
 from utils import *
+from constant import *
 import tensorflow as tf
-from train import init_session, init_model
+from test import load_model
+from train import init_session
 from tensorflow.python.framework import graph_util
 
 
 def checkpoint2pb():
-    def _process(_):
-        sess = init_session()
-        model, model_settings = init_model()
-        decoded_sample_data = tf.compat.v1.placeholder(tf.float32, [model_settings['sample_rate'], 1],
-                                                       name='decoded_sample_data')
-        spectrogram = tf.raw_ops.AudioSpectrogram(input=decoded_sample_data,
-                                                  window_size=model_settings['window_size_samples'],
-                                                  stride=model_settings['window_stride_samples'],
-                                                  magnitude_squared=True)
-        mfcc_ = tf.raw_ops.Mfcc(spectrogram=spectrogram,
-                                sample_rate=model_settings['sample_rate'],
-                                dct_coefficient_count=model_settings['dct_coefficient_count'])
-
-        fingerprint_frequency_size = model_settings['dct_coefficient_count']
-        fingerprint_time_size = model_settings['spectrogram_length']
-        reshaped_input = tf.reshape(mfcc_, [-1, fingerprint_time_size * fingerprint_frequency_size])
-        logits, dropout_prob = model.forward(reshaped_input, args.model_size_info, is_training=False)
-
-        # Create an output to use for inference.
-        tf.sigmoid(logits, name='labels_sigmoid')
-
-        model.load_variables_from_checkpoint(sess, args.checkpoint)
-        nodes = [op.name for op in tf.compat.v1.get_default_graph().get_operations()]
-        print(nodes)
-
-        # Turn all the variables into inline constants inside the graph and save it.
-        frozen_graph_def = graph_util.convert_variables_to_constants(
-            sess, sess.graph_def, ['labels_sigmoid'])
-        tf.compat.v1.train.write_graph(frozen_graph_def,
-                                       os.path.dirname(args.pb),
-                                       os.path.basename(args.pb),
-                                       as_text=False)
-        tf.compat.v1.logging.info('Saved frozen graph to %s', args.pb)
-
-        sess.close()
-
-    args = prepare_config()
-    tf.compat.v1.app.run(main=_process)
+    sess = init_session()
+    load_model(args, ModelType.CHECKPOINT, sess)
+    nodes = [op.name for op in tf.compat.v1.get_default_graph().get_operations()]
+    print(nodes)
+    # Turn all the variables into inline constants inside the graph and save it.
+    frozen_graph_def = graph_util.convert_variables_to_constants(
+        sess, sess.graph_def, ['labels_sigmoid'])
+    tf.compat.v1.train.write_graph(frozen_graph_def,
+                                   os.path.dirname(args.pb),
+                                   os.path.basename(args.pb),
+                                   as_text=False)
+    tf.compat.v1.logging.info('Saved frozen graph to %s', args.pb)
+    sess.close()
 
 
 def pb2tflite():
-    args = prepare_config()
     converter = tf.compat.v1.lite.TFLiteConverter.from_frozen_graph(
         args.pb,
         input_arrays=['decoded_sample_data'],
@@ -60,5 +37,6 @@ def pb2tflite():
 
 
 if __name__ == '__main__':
-    # checkpoint2pb()
+    args = prepare_config()
+    checkpoint2pb()
     pb2tflite()

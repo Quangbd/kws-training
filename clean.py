@@ -2,12 +2,26 @@ import os
 import sox
 import time
 import random
+import subprocess
 import numpy as np
 from constant import *
 from tqdm import tqdm
 from glob import glob
 
 random.seed(RANDOM_SEED)
+
+
+def convert_standard_wav(wav_folder_path, output_path):
+    """
+    Convert raw wav to 16kHz and 1 channel wav file
+    :param wav_folder_path: Folder contain wav files
+    :param output_path: Output folder path
+    """
+    for file in glob(os.path.join(wav_folder_path, '*.wav')):
+        subprocess.call(
+            'ffmpeg -i {} -ar 16000 -ac 1 {}'.format(file.replace(' ', '\ '),
+                                                     os.path.join(output_path, '{}.wav'.format(time.time()))),
+            shell=True)
 
 
 def get_all_wav_file(wav_folder_path, shuffle=True):
@@ -122,6 +136,8 @@ def split_folder(wav_folder_path, wav_output_path, name, count=100_000):
 
 
 if __name__ == '__main__':
-    split_folder('/home/ubuntu/new_kws/kws_data/raw/vocal_vn',
-                 '/home/ubuntu/new_kws/kws_data/train/vocal_vn',
-                 name='vocal_vn')
+    # split_folder('/home/ubuntu/new_kws/kws_data/raw/vocal_vn',
+    #              '/home/ubuntu/new_kws/kws_data/train/vocal_vn',
+    #              name='vocal_vn')
+    convert_standard_wav('/Users/quangbd/Desktop/negative',
+                         '/Users/quangbd/Documents/data/kws/test/negative')

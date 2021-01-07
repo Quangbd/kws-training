@@ -32,7 +32,7 @@ class AudioLoader:
     def which_set(filename, word, validation_percentage, testing_percentage):
         base_name = os.path.basename(filename)
 
-        if word == KEYWORD_LABEL or word == AUGMENT_POSITIVE_LABEL:
+        if word == POSITIVE_LABEL or word == AUGMENT_POSITIVE_LABEL:
             hash_name = base_name.split('_')[0]
         else:
             hash_name = base_name
@@ -61,7 +61,7 @@ class AudioLoader:
                 continue
             all_words[word] = True
             set_index = self.which_set(wav_path, word, self.validation_percentage, self.testing_percentage)
-            if word == KEYWORD_LABEL or word == AUGMENT_POSITIVE_LABEL:
+            if word == POSITIVE_LABEL or word == AUGMENT_POSITIVE_LABEL:
                 self.data_index[set_index].append({'label': word, 'file': wav_path})
             elif word == VOCAL_WORD_LABEL:
                 negative_index[set_index].append({'label': word, 'file': wav_path})
@@ -93,7 +93,7 @@ class AudioLoader:
 
         # Prepare the rest of the result data structure.
         for word in all_words:
-            if word == KEYWORD_LABEL or word == AUGMENT_POSITIVE_LABEL:
+            if word == POSITIVE_LABEL or word == AUGMENT_POSITIVE_LABEL:
                 self.word_to_index[word] = POSITIVE_WORD_INDEX
             else:
                 self.word_to_index[word] = NEGATIVE_WORD_INDEX

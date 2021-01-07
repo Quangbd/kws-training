@@ -1,37 +1,13 @@
 import os
-import random
 import numpy as np
 from utils import *
-from constant import *
 from tqdm import tqdm
+from constant import *
 import tensorflow as tf
 from data import AudioLoader
-from models import select_model
 
 
-def init_session():
-    random.seed(RANDOM_SEED)
-    tf.compat.v1.disable_eager_execution()
-    sess = tf.compat.v1.InteractiveSession()
-    return sess
-
-
-def init_model():
-    model = select_model(window_size_ms=args.window_size_ms, window_stride_ms=args.window_stride_ms,
-                         dct_coefficient_count=args.dct_coefficient_count,
-                         name=args.model_architecture)
-    model_settings = model.prepare_model_settings()
-    print('-----\nModel settings: {}'.format(model_settings))
-    return model, model_settings
-
-
-def init_data(model_settings):
-    return AudioLoader(args.data_dir, args.silence_percentage, args.negative_percentage,
-                       args.validation_percentage, args.testing_percentage,
-                       model_settings, augment_dir=args.augment_dir)
-
-
-def init_placeholder(model_settings, is_train=True):
+def init_placeholder(args, model_settings, is_train=True):
     time_shift_samples = None
     training_steps_list = None
     learning_rates_list = None
@@ -46,7 +22,7 @@ def init_placeholder(model_settings, is_train=True):
     return time_shift_samples, training_steps_list, learning_rates_list, fingerprint_input, ground_truth_input
 
 
-def init_graph(model, model_settings, fingerprint_input, ground_truth_input, is_train=True):
+def init_graph(args, model, model_settings, fingerprint_input, ground_truth_input, is_train=True):
     logits, dropout_prob = model.forward(fingerprint_input, args.model_size_info)
 
     if is_train:
@@ -71,14 +47,17 @@ def init_graph(model, model_settings, fingerprint_input, ground_truth_input, is_
     return evaluation_step, cross_entropy_mean, train_step, learning_rate_input, confusion_matrix, dropout_prob
 
 
-def main(_):
+def main(args):
     sess = init_session()
-    model, model_settings = init_model()
-    audio_loader = init_data(model_settings)
+    model, model_settings = init_model(args)
+    print('-----\nModel settings: {}'.format(model_settings))
+    audio_loader = AudioLoader(args.data_dir, args.silence_percentage, args.negative_percentage,
+                               args.validation_percentage, args.testing_percentage,
+                               model_settings, augment_dir=args.augment_dir)
     time_shift_samples, training_steps_list, learning_rates_list, fingerprint_input, ground_truth_input = \
-        init_placeholder(model_settings)
+        init_placeholder(args, model_settings)
     evaluation_step, cross_entropy_mean, train_step, learning_rate_input, confusion_matrix, dropout_prob = \
-        init_graph(model, model_settings, fingerprint_input, ground_truth_input)
+        init_graph(args, model, model_settings, fingerprint_input, ground_truth_input)
 
     global_step = tf.compat.v1.train.get_or_create_global_step()
     increment_global_step = tf.compat.v1.assign(global_step, global_step + 1)
@@ -201,5 +180,5 @@ def main(_):
 
 
 if __name__ == '__main__':
-    args = prepare_config()
-    tf.compat.v1.app.run(main=main)
+    args_ = prepare_config()
+    tf.compat.v1.app.run(main=main, argv=args_)
