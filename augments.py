@@ -129,13 +129,15 @@ def process_file(file_path, output_dir, background_noise=None, file_name=None, m
     return output_path
 
 
-def augment_positive(limit=10_000):
+def augment_positive(limit=20_000):
     count = 0
     while True:
-        for file in glob('/Users/quangbd/Documents/data/kws/train/keyword/*.wav'):
+        for file in glob('/Users/quangbd/Documents/data/kws/train/positive/*/*.wav'):
             process_file(file, '/Users/quangbd/Documents/data/kws/train/augment_positive', None,
                          file.split('/')[-1].split('_')[0], min_no_chain=1)
             count += 1
+            if count % 1000 == 0:
+                print(count)
         if count > limit:
             break
 

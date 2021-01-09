@@ -7,7 +7,7 @@ import tensorflow as tf
 from data import AudioLoader
 
 
-def init_placeholder(args, model_settings, is_train=True):
+def init_placeholder(model_settings, is_train=True):
     time_shift_samples = None
     training_steps_list = None
     learning_rates_list = None
@@ -22,7 +22,7 @@ def init_placeholder(args, model_settings, is_train=True):
     return time_shift_samples, training_steps_list, learning_rates_list, fingerprint_input, ground_truth_input
 
 
-def init_graph(args, model, model_settings, fingerprint_input, ground_truth_input, is_train=True):
+def init_graph(model, model_settings, fingerprint_input, ground_truth_input, is_train=True):
     logits, dropout_prob = model.forward(fingerprint_input, args.model_size_info)
 
     if is_train:
@@ -47,17 +47,16 @@ def init_graph(args, model, model_settings, fingerprint_input, ground_truth_inpu
     return evaluation_step, cross_entropy_mean, train_step, learning_rate_input, confusion_matrix, dropout_prob
 
 
-def main(args):
+def main(_):
     sess = init_session()
     model, model_settings = init_model(args)
     print('-----\nModel settings: {}'.format(model_settings))
     audio_loader = AudioLoader(args.data_dir, args.silence_percentage, args.negative_percentage,
-                               args.validation_percentage, args.testing_percentage,
-                               model_settings, augment_dir=args.augment_dir)
+                               args.validation_percentage, model_settings, augment_dir=args.augment_dir)
     time_shift_samples, training_steps_list, learning_rates_list, fingerprint_input, ground_truth_input = \
-        init_placeholder(args, model_settings)
+        init_placeholder(model_settings)
     evaluation_step, cross_entropy_mean, train_step, learning_rate_input, confusion_matrix, dropout_prob = \
-        init_graph(args, model, model_settings, fingerprint_input, ground_truth_input)
+        init_graph(model, model_settings, fingerprint_input, ground_truth_input)
 
     global_step = tf.compat.v1.train.get_or_create_global_step()
     increment_global_step = tf.compat.v1.assign(global_step, global_step + 1)
@@ -150,35 +149,10 @@ def main(args):
                     print('Saving best model to {} - step {}'.format(checkpoint_path, step))
                 print('So far the best validation accuracy is %.2f%%' % (best_accuracy * 100))
 
-    # test
-    print('Testing')
-    test_size = audio_loader.size(mode='testing')
-    print('set_size=%d', test_size)
-    total_accuracy = 0
-    total_conf_matrix = None
-    for i in tqdm(range(0, test_size, args.batch_size)):
-        test_fingerprints, test_ground_truth, _, _ = audio_loader \
-            .load_batch(sess, args.batch_size, offset=i, background_frequency=0,
-                        time_shift=0, mode='testing')
-        test_summary, test_accuracy, test_matrix = sess.run(
-            [merged_summaries, evaluation_step, confusion_matrix],
-            feed_dict={
-                fingerprint_input: test_fingerprints,
-                ground_truth_input: test_ground_truth,
-                dropout_prob: 1.0})
-        batch_size = min(args.batch_size, test_size - i)
-        total_accuracy += (test_accuracy * batch_size) / test_size
-        if total_conf_matrix is None:
-            total_conf_matrix = test_matrix
-        else:
-            total_conf_matrix += test_matrix
-    print('Final confusion matrix: \n %s' % total_conf_matrix)
-    print('Final accuracy {}'.format(total_accuracy))
-
     # close
     sess.close()
 
 
 if __name__ == '__main__':
-    args_ = prepare_config()
-    tf.compat.v1.app.run(main=main, argv=args_)
+    args = prepare_config()
+    tf.compat.v1.app.run(main=main)

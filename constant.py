@@ -7,6 +7,7 @@ SAMPLE_RATE = 16_000
 DESIRED_SAMPLE = 16_000
 CLIP_DURATION_MS = 1000
 TIME_SHIFT_MS = 0
+FILE_SIZE = 32044
 
 MAX_NUM_WAVS_PER_CLASS = 2 ** 27 - 1  # ~134M
 BACKGROUND_NOISE_DIR_NAME = 'background_noise'
@@ -20,6 +21,10 @@ REAL_NEGATIVE_LABEL = 'real_negative'
 NEGATIVE_WORD_INDEX = 0
 POSITIVE_WORD_INDEX = 1
 
+# For firebase
+BUCKET_NAME = 'voice-kws.appspot.com'
+KEY_PATH = 'firebase.json'
+VAD_WAV_PATH = '/home/ubuntu/projects/VAD/data'
 
 class ModelType(Enum):
     CHECKPOINT = 1

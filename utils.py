@@ -127,7 +127,7 @@ def prepare_config():
                         default='/Users/quangbd/Documents/data/model/kws/tmp/checkpoints',
                         help='Directory to write event logs and checkpoint.')
 
-    # For div train / test
+    # For div train / val
     parser.add_argument('--silence_percentage',
                         type=int,
                         default=500,
@@ -140,10 +140,6 @@ def prepare_config():
                         type=int,
                         default=10,
                         help='What percentage of wavs to use as a validation set.')
-    parser.add_argument('--testing_percentage',
-                        type=int,
-                        default=10,
-                        help='What percentage of wavs to use as a testing set.')
 
     # For volume
     parser.add_argument('--background_frequency',

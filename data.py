@@ -4,6 +4,7 @@ import random
 import hashlib
 import augments
 import numpy as np
+from tqdm import tqdm
 from constant import *
 import tensorflow as tf
 from tensorflow.python.util import compat
@@ -11,16 +12,15 @@ from tensorflow.python.util import compat
 
 class AudioLoader:
     def __init__(self, data_dir, silence_percentage, negative_percentage,
-                 validation_percentage, testing_percentage, model_settings, augment_dir=None):
+                 validation_percentage, model_settings, augment_dir=None):
         self.data_dir = data_dir
         self.augment_dir = augment_dir
         self.silence_percentage = silence_percentage
         self.negative_percentage = negative_percentage
         self.validation_percentage = validation_percentage
-        self.testing_percentage = testing_percentage
         self.model_settings = model_settings
 
-        self.data_index = {'validation': [], 'testing': [], 'training': []}
+        self.data_index = {'validation': [], 'training': []}
         self.word_to_index = {}
         self.background_data = []
 
@@ -29,7 +29,7 @@ class AudioLoader:
         self.mfcc_input_, self.mfcc_ = self.prepare_processing_graph()
 
     @staticmethod
-    def which_set(filename, word, validation_percentage, testing_percentage):
+    def which_set(filename, word, validation_percentage):
         base_name = os.path.basename(filename)
 
         if word == POSITIVE_LABEL or word == AUGMENT_POSITIVE_LABEL:
@@ -41,26 +41,28 @@ class AudioLoader:
                            * (100.0 / MAX_NUM_WAVS_PER_CLASS))
         if percentage_hash < validation_percentage:
             result = 'validation'
-        elif percentage_hash < (testing_percentage + validation_percentage):
-            result = 'testing'
         else:
             result = 'training'
         return result
 
     def prepare_data_index(self):
-        negative_index = {'validation': [], 'testing': [], 'training': []}
-        real_negative_index = {'validation': [], 'testing': [], 'training': []}
+        negative_index = {'validation': [], 'training': []}
+        real_negative_index = {'validation': [], 'training': []}
         all_words = {}
 
         # Look through all the sub folders to find audio samples
-        search_path = os.path.join(self.data_dir, '*', '*.wav')
-        for wav_path in tf.io.gfile.glob(search_path):
-            _, word = os.path.split(os.path.dirname(wav_path))
+        all_wav_paths = tf.io.gfile.glob(os.path.join(self.data_dir, '*', '*.wav')) + tf.io.gfile.glob(
+            os.path.join(self.data_dir, '{}/*/*.wav'.format(POSITIVE_LABEL)))
+        for wav_path in tqdm(all_wav_paths):
+            if POSITIVE_LABEL in wav_path and AUGMENT_POSITIVE_LABEL not in wav_path:
+                word = os.path.dirname(wav_path).split('/')[-2]
+            else:
+                _, word = os.path.split(os.path.dirname(wav_path))
             word = word.lower()
             if word == BACKGROUND_NOISE_DIR_NAME:
                 continue
             all_words[word] = True
-            set_index = self.which_set(wav_path, word, self.validation_percentage, self.testing_percentage)
+            set_index = self.which_set(wav_path, word, self.validation_percentage)
             if word == POSITIVE_LABEL or word == AUGMENT_POSITIVE_LABEL:
                 self.data_index[set_index].append({'label': word, 'file': wav_path})
             elif word == VOCAL_WORD_LABEL:
@@ -68,12 +70,12 @@ class AudioLoader:
             elif word == REAL_NEGATIVE_LABEL:
                 real_negative_index[set_index].append({'label': word, 'file': wav_path})
         if not all_words:
-            raise Exception('No .wavs found at {}'.format(search_path))
+            raise Exception('No .wavs found at {}'.format(self.data_dir))
 
         # We need an arbitrary file to load as the input for the silence samples.
         # It's multiplied by zero later, so the content doesn't matter.
         silence_wav_path = self.data_index['training'][0]['file']
-        for set_index in ['validation', 'testing', 'training']:
+        for set_index in ['validation', 'training']:
             set_size = len(self.data_index[set_index])
             silence_size = int(math.ceil(set_size * self.silence_percentage / 100))
             for _ in range(silence_size):
@@ -102,7 +104,7 @@ class AudioLoader:
         # Make sure the ordering is random.
         print('-----')
         total_count_label = {}
-        for set_index in ['validation', 'testing', 'training']:
+        for set_index in ['validation', 'training']:
             random.shuffle(self.data_index[set_index])
 
             # count label
