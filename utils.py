@@ -144,7 +144,7 @@ def prepare_config():
     # For volume
     parser.add_argument('--background_frequency',
                         type=int,
-                        default=0.7,
+                        default=0.6,
                         help='How many of the training samples have background noise mixed in.')
     parser.add_argument('--background_silence_frequency',
                         type=int,

@@ -50,7 +50,7 @@ class RandomReverb:
 
 
 class AddNoise:
-    def __init__(self, background_noise, total_sample_in_file=16_000, min_snr=3, max_snr=15):
+    def __init__(self, background_noise, total_sample_in_file=16_000, min_snr=5, max_snr=15):
         self.noise_data = background_noise
         self.total_sample_in_file = total_sample_in_file
         self.min_snr = min_snr

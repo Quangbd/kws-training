@@ -7,6 +7,12 @@ import tensorflow as tf
 from data import AudioLoader
 
 
+def micro_accuracy(confusion_matrix):
+    if sum(confusion_matrix[1]) == 0:
+        return confusion_matrix[0][0] / sum(confusion_matrix[0]) / 2
+    return (confusion_matrix[0][0] / sum(confusion_matrix[0]) + confusion_matrix[1][1] / sum(confusion_matrix[1])) / 2
+
+
 def init_placeholder(model_settings, is_train=True):
     time_shift_samples = None
     training_steps_list = None
@@ -22,31 +28,6 @@ def init_placeholder(model_settings, is_train=True):
     return time_shift_samples, training_steps_list, learning_rates_list, fingerprint_input, ground_truth_input
 
 
-def init_graph(model, model_settings, fingerprint_input, ground_truth_input, is_train=True):
-    logits, dropout_prob = model.forward(fingerprint_input, args.model_size_info)
-
-    if is_train:
-        # Create the back propagation and training evaluation machinery in the graph.
-        with tf.name_scope('cross_entropy'):
-            cross_entropy_mean = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-                labels=ground_truth_input, logits=logits))
-        tf.compat.v1.summary.scalar('cross_entropy', cross_entropy_mean)
-
-        update_ops = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS)
-        with tf.name_scope('train'), tf.control_dependencies(update_ops):
-            learning_rate_input = tf.compat.v1.placeholder(tf.float32, [], name='learning_rate_input')
-            train_step = tf.compat.v1.train.AdamOptimizer(learning_rate_input).minimize(cross_entropy_mean)
-
-    predicted_indices = tf.argmax(logits, 1)
-    expected_indices = tf.argmax(ground_truth_input, 1)
-    correct_prediction = tf.equal(predicted_indices, expected_indices)
-    confusion_matrix = tf.math.confusion_matrix(expected_indices, predicted_indices,
-                                                num_classes=model_settings['label_count'])
-    evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    tf.compat.v1.summary.scalar('accuracy', evaluation_step)
-    return evaluation_step, cross_entropy_mean, train_step, learning_rate_input, confusion_matrix, dropout_prob
-
-
 def main(_):
     sess = init_session()
     model, model_settings = init_model(args)
@@ -55,8 +36,28 @@ def main(_):
                                args.validation_percentage, model_settings, augment_dir=args.augment_dir)
     time_shift_samples, training_steps_list, learning_rates_list, fingerprint_input, ground_truth_input = \
         init_placeholder(model_settings)
-    evaluation_step, cross_entropy_mean, train_step, learning_rate_input, confusion_matrix, dropout_prob = \
-        init_graph(model, model_settings, fingerprint_input, ground_truth_input)
+
+    # init graph
+    logits, dropout_prob = model.forward(fingerprint_input, args.model_size_info)
+
+    # Create the back propagation and training evaluation machinery in the graph.
+    with tf.name_scope('cross_entropy'):
+        cross_entropy_mean = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+            labels=ground_truth_input, logits=logits))
+    tf.compat.v1.summary.scalar('cross_entropy', cross_entropy_mean)
+
+    update_ops = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS)
+    with tf.name_scope('train'), tf.control_dependencies(update_ops):
+        learning_rate_input = tf.compat.v1.placeholder(tf.float32, [], name='learning_rate_input')
+        train_step = tf.compat.v1.train.AdamOptimizer(learning_rate_input).minimize(cross_entropy_mean)
+
+    predicted_indices = tf.argmax(logits, 1)
+    expected_indices = tf.argmax(ground_truth_input, 1)
+    correct_prediction = tf.equal(predicted_indices, expected_indices)
+    confusion_matrix = tf.math.confusion_matrix(expected_indices, predicted_indices,
+                                                num_classes=model_settings['label_count'])
+    evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    tf.compat.v1.summary.scalar('accuracy', evaluation_step)
 
     global_step = tf.compat.v1.train.get_or_create_global_step()
     increment_global_step = tf.compat.v1.assign(global_step, global_step + 1)
@@ -78,7 +79,7 @@ def main(_):
     # training loop
     step = 0
     epoch = 0
-    best_accuracy = 0
+    best_micro_accuracy = 0
     training_steps_max = np.sum(training_steps_list)
     train_size = audio_loader.size('training')
     while step < training_steps_max + 1:
@@ -103,16 +104,17 @@ def main(_):
                             background_silence_frequency=args.background_silence_frequency,
                             background_silence_volume_range=args.background_silence_volume,
                             time_shift=time_shift_samples, mode='training')
-            train_summary, train_accuracy, cross_entropy_value, _, _ = sess.run(
-                [merged_summaries, evaluation_step, cross_entropy_mean, train_step, increment_global_step],
+            train_matrix, train_summary, train_accuracy, cross_entropy_value, _, _ = sess.run(
+                [confusion_matrix,
+                 merged_summaries, evaluation_step, cross_entropy_mean, train_step, increment_global_step],
                 feed_dict={fingerprint_input: train_fingerprints,
                            ground_truth_input: train_ground_truth,
                            learning_rate_input: learning_rate_value,
                            dropout_prob: 1.0})
             train_writer.add_summary(train_summary, step)
-            print('Epoch {} - Step {}: train accuracy {}, cross entropy {}, lr {}, positive {}, negative {}'
-                  .format(epoch, step, train_accuracy * 100, cross_entropy_value,
-                          learning_rate_value, positive_count, negative_count))
+            print('Epoch {} - Step {}: train acc {}, micro acc {}, cross entropy {}, lr {}, positive {}, negative {}'
+                  .format(epoch, step, round(train_accuracy * 100, 2), round(micro_accuracy(train_matrix) * 100, 2),
+                          cross_entropy_value, learning_rate_value, positive_count, negative_count))
 
             # val
             if step % args.eval_step_interval == 0:
@@ -137,17 +139,18 @@ def main(_):
                     else:
                         total_conf_matrix += val_matrix
                 print('Confusion matrix: \n %s' % total_conf_matrix)
-                print('Step {}: val accuracy {}'.format(step, total_accuracy))
+                micro_acc = micro_accuracy(total_conf_matrix)
+                print('Step {}: val accuracy {}, micro accuracy {}'.format(step, total_accuracy, micro_acc))
 
                 # Save the model checkpoint when validation accuracy improves
-                if total_accuracy >= best_accuracy:
-                    best_accuracy = total_accuracy
+                if micro_acc >= best_micro_accuracy:
+                    best_micro_accuracy = micro_acc
                     checkpoint_path = os.path.join(
                         args.train_dir, 'best',
-                        '{}_{}.ckpt'.format(args.model_architecture, str(int(best_accuracy * 10000))))
+                        '{}_{}.ckpt'.format(args.model_architecture, str(int(best_micro_accuracy * 10000))))
                     saver.save(sess, checkpoint_path, global_step=step)
                     print('Saving best model to {} - step {}'.format(checkpoint_path, step))
-                print('So far the best validation accuracy is %.2f%%' % (best_accuracy * 100))
+                print('So far the best validation micro accuracy is %.2f%%' % (best_micro_accuracy * 100))
 
     # close
     sess.close()
