@@ -63,10 +63,8 @@ class AudioLoader:
                 continue
             all_words[word] = True
             set_index = self.which_set(wav_path, word, self.validation_percentage)
-            if word == POSITIVE_LABEL:
+            if word == POSITIVE_LABEL or word == AUGMENT_POSITIVE_LABEL:
                 self.data_index[set_index].append({'label': word, 'file': wav_path})
-            elif word == AUGMENT_POSITIVE_LABEL:
-                self.data_index['training'].append({'label': word, 'file': wav_path})
             elif word == VOCAL_WORD_LABEL:
                 negative_index[set_index].append({'label': word, 'file': wav_path})
             elif word == REAL_NEGATIVE_LABEL:

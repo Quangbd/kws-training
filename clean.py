@@ -184,7 +184,7 @@ def download_firebase(days, output_path):
         print('Download day:', day)
         blobs = bucket.list_blobs(prefix='kws/{}'.format(day))
         for blob in blobs:
-            blob.download_to_filename(tmp_file)
+            # blob.download_to_filename(tmp_file)
             username = blob.name.split('/')[-1].split('@')[0].lower().replace('v.', '')
             email = '{}@{}'.format(blob.name.split('/')[-1].split('@')[0].lower().split('_')[0],
                                    blob.name.split('/')[-1].split('@')[1].split('||')[0].lower())
@@ -194,9 +194,9 @@ def download_firebase(days, output_path):
                 all_names[email] = 1
             filename = '{}_{}.wav'.format(username, time.time())
             all_files.append(filename)
-            subprocess.call('ffmpeg -i {} -ar 16000 -ac 1 {}'
-                            .format(tmp_file, os.path.join(wavs_path, filename)), shell=True)
-            os.remove(tmp_file)
+            # subprocess.call('ffmpeg -i {} -ar 16000 -ac 1 {}'
+            #                 .format(tmp_file, os.path.join(wavs_path, filename)), shell=True)
+            # os.remove(tmp_file)
 
     # write spk2utt
     spk2utt_file = os.path.join(output_path, 'spk2utt')
@@ -291,10 +291,10 @@ if __name__ == '__main__':
     #              name='vocal_vn')
     # convert_standard_wav('/Users/quangbd/Desktop/negative',
     #                      '/Users/quangbd/Documents/data/kws/test/negative')
-    # download_firebase(['2021-01-07', '2021-01-08', '2021-01-09'], '/Users/quangbd/Desktop/heyvf_20210109')
-    # segment_to_wavs('/Users/quangbd/Desktop/heyvf_20210108/wavs',
-    #                 '/Users/quangbd/Desktop/heyvf_20210108/splits',
-    #                 '/Users/quangbd/Desktop/heyvf_20210108/segments20210108')
-    convert_standard_wav('/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210108/tmp',
-                         '/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210108/tmp_split',
+    # download_firebase(['2021-01-07', '2021-01-08', '2021-01-09', '2021-01-10'], '/Users/quangbd/Desktop/heyvf_20210110')
+    # segment_to_wavs('/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/wavs',
+    #                 '/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/splits',
+    #                 '/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/segments20210110')
+    convert_standard_wav('/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/tmp',
+                         '/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/tmp_split',
                          seconds=1)
