@@ -130,7 +130,7 @@ def prepare_config():
     # For div train / val
     parser.add_argument('--silence_percentage',
                         type=int,
-                        default=500,
+                        default=300,
                         help='How much of the training data should be silence.')
     parser.add_argument('--negative_percentage',
                         type=int,
