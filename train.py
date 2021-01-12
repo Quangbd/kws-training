@@ -1,16 +1,19 @@
 import os
+import wandb
 import numpy as np
 from utils import *
 from tqdm import tqdm
 from constant import *
 import tensorflow as tf
 from data import AudioLoader
+import tensorflow_addons as tfa
 
 
 def micro_accuracy(confusion_matrix):
     if sum(confusion_matrix[1]) == 0:
-        return confusion_matrix[0][0] / sum(confusion_matrix[0]) / 2
-    return (confusion_matrix[0][0] / sum(confusion_matrix[0]) + confusion_matrix[1][1] / sum(confusion_matrix[1])) / 2
+        return confusion_matrix[0][0] / sum(confusion_matrix[0]), 1
+    # Negative, positive
+    return confusion_matrix[0][0] / sum(confusion_matrix[0]), confusion_matrix[1][1] / sum(confusion_matrix[1])
 
 
 def init_placeholder(model_settings, is_train=True):
@@ -36,14 +39,28 @@ def main(_):
                                args.validation_percentage, model_settings, augment_dir=args.augment_dir)
     time_shift_samples, training_steps_list, learning_rates_list, fingerprint_input, ground_truth_input = \
         init_placeholder(model_settings)
+    w_config = {'architecture': args.model_architecture,
+                'background_frequency': args.background_frequency,
+                'background_silence_frequency': args.background_silence_frequency,
+                'background_silence_volume': args.background_silence_volume,
+                'silence_percentage': args.silence_percentage,
+                'learning_rate': learning_rates_list[0],
+                'loss_method': args.loss_method,
+                'batch_size': args.batch_size}
+    w_config.update(audio_loader.total_sample_count)
+    wandb.init(project='kws', name=args.name, config=w_config)
 
     # init graph
     logits, dropout_prob = model.forward(fingerprint_input, args.model_size_info)
 
     # Create the back propagation and training evaluation machinery in the graph.
     with tf.name_scope('cross_entropy'):
-        cross_entropy_mean = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-            labels=ground_truth_input, logits=logits))
+        if args.loss_method == 'fe':  # Focal entropy loss
+            cross_entropy_mean = tf.reduce_mean(tfa.losses.sigmoid_focal_crossentropy(
+                y_true=ground_truth_input, y_pred=tf.nn.softmax(logits)))
+        else:  # Cross entropy loss
+            cross_entropy_mean = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+                labels=ground_truth_input, logits=logits))
     tf.compat.v1.summary.scalar('cross_entropy', cross_entropy_mean)
 
     update_ops = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS)
@@ -79,7 +96,7 @@ def main(_):
     # training loop
     step = 0
     epoch = 0
-    best_micro_accuracy = 0
+    best_accuracy = 0
     training_steps_max = np.sum(training_steps_list)
     train_size = audio_loader.size('training')
     while step < training_steps_max + 1:
@@ -112,8 +129,12 @@ def main(_):
                            learning_rate_input: learning_rate_value,
                            dropout_prob: 1.0})
             train_writer.add_summary(train_summary, step)
-            print('Epoch {} - Step {}: train acc {}, micro acc {}, cross entropy {}, lr {}, positive {}, negative {}'
-                  .format(epoch, step, round(train_accuracy * 100, 2), round(micro_accuracy(train_matrix) * 100, 2),
+            train_negative_acc, train_positive_acc = micro_accuracy(train_matrix)
+            wandb.log({'train_epoch': epoch, 'train_acc': train_accuracy, 'train_negative_acc': train_negative_acc,
+                       'train_positive_acc': train_positive_acc, 'train_loss': cross_entropy_value})
+            print('Epoch {} - Step {}: train acc {}, nea {} poa {}, cross entropy {}, lr {}, positive {}, negative {}'
+                  .format(epoch, step, round(train_accuracy * 100, 2),
+                          round(train_negative_acc * 100, 2), round(train_positive_acc * 100, 2),
                           cross_entropy_value, learning_rate_value, positive_count, negative_count))
 
             # val
@@ -139,20 +160,24 @@ def main(_):
                     else:
                         total_conf_matrix += val_matrix
                 print('Confusion matrix: \n %s' % total_conf_matrix)
-                micro_acc = micro_accuracy(total_conf_matrix)
-                print('Step {}: val accuracy {}, micro accuracy {}'.format(step, total_accuracy, micro_acc))
+                val_negative_acc, val_positive_acc = micro_accuracy(train_matrix)
+                wandb.log({'val_acc': total_accuracy, 'val_negative_acc': val_negative_acc,
+                           'val_positive_acc': val_positive_acc})
+                print('Step {}: val accuracy {}, negative acc {} - positive acc {}'
+                      .format(step, total_accuracy, val_negative_acc, val_positive_acc))
 
                 # Save the model checkpoint when validation accuracy improves
-                if micro_acc >= best_micro_accuracy:
-                    best_micro_accuracy = micro_acc
+                if total_accuracy >= best_accuracy:
+                    best_micro_accuracy = total_accuracy
                     checkpoint_path = os.path.join(
                         args.train_dir, 'best',
                         '{}_{}.ckpt'.format(args.model_architecture, str(int(best_micro_accuracy * 10000))))
                     saver.save(sess, checkpoint_path, global_step=step)
                     print('Saving best model to {} - step {}'.format(checkpoint_path, step))
-                print('So far the best validation micro accuracy is %.2f%%' % (best_micro_accuracy * 100))
+                print('So far the best validation accuracy is %.2f%%' % (best_accuracy * 100))
 
     # close
+    wandb.finish()
     sess.close()
 
 

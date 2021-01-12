@@ -82,6 +82,14 @@ def load_model(args, model_type, session=None):
 
 def prepare_config():
     parser = argparse.ArgumentParser(description='set input arguments')
+    parser.add_argument('--name',
+                        type=str,
+                        default='kws-0',
+                        help='Name job')
+    parser.add_argument('--loss_method',
+                        type=str,
+                        default='ce',
+                        help='Loss method')
     parser.add_argument('--data_dir',
                         type=str,
                         default='/Users/quangbd/Documents/data/kws/train/',
@@ -168,7 +176,7 @@ def prepare_config():
     parser.add_argument('--checkpoint',
                         type=str,
                         default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1/'
-                                'training/best/ds_cnn_9964.ckpt-43000',
+                                'training/best/ds_cnn_9734.ckpt-31000',
                         help='Checkpoint to load the weights from.')
     parser.add_argument('--pb',
                         type=str,

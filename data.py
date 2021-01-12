@@ -24,7 +24,7 @@ class AudioLoader:
         self.word_to_index = {}
         self.background_data = []
 
-        self.prepare_data_index()
+        self.total_sample_count = self.prepare_data_index()
         self.prepare_background_data()
         self.mfcc_input_, self.mfcc_ = self.prepare_processing_graph()
 
@@ -122,8 +122,13 @@ class AudioLoader:
                     total_count_label[label] = 1
             print('Set index:', set_index, ' - Count:', sorted(count_label.items()),
                   ' - Sum:', sum(count_label.values()))
-        print('Total count:', sorted(total_count_label.items()), ' - Sum:', sum(total_count_label.values()))
+            sum_total_count_label = sum(total_count_label.values())
+        print('Total count:', sorted(total_count_label.items()), ' - Sum:', sum_total_count_label)
         print('-----')
+        result_count = {'count_{}'.format(count_item): total_count_label[count_item]
+                        for count_item in total_count_label}
+        result_count['count_sum'] = sum_total_count_label
+        return result_count
 
     def prepare_background_data(self):
         background_dir = os.path.join(self.data_dir, BACKGROUND_NOISE_DIR_NAME)
