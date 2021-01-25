@@ -1,3 +1,6 @@
 .idea
 kws.iml
 __pycache__
+wandb
+work
+augment_dir

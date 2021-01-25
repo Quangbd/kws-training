@@ -26,6 +26,11 @@ BUCKET_NAME = 'voice-kws.appspot.com'
 KEY_PATH = 'firebase.json'
 VAD_WAV_PATH = '/home/ubuntu/projects/VAD/data'
 
+MIN_TEST_THRESHOLD = 0
+MAX_TEST_THRESHOLD = 1.02
+RANGE_TEST_THRESHOLD = 0.02
+
+
 class ModelType(Enum):
     CHECKPOINT = 1
     GRAPH = 2

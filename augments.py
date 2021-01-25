@@ -14,6 +14,9 @@ import numpy as np
 from glob import glob
 import torch.nn.functional as torch_function
 from dataclasses import dataclass
+from utils import set_seed
+
+set_seed()
 
 
 class RandomPitchShift:

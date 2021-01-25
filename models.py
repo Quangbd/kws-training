@@ -1,7 +1,6 @@
 import math
-from constant import *
 import tf_slim as slim
-import tensorflow as tf
+from utils import *
 
 
 def select_model(window_size_ms, window_stride_ms, dct_coefficient_count,

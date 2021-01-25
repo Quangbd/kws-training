@@ -289,12 +289,12 @@ if __name__ == '__main__':
     # split_folder('/home/ubuntu/new_kws/kws_data/raw/vocal_vn',
     #              '/home/ubuntu/new_kws/kws_data/train/vocal_vn',
     #              name='vocal_vn')
-    # convert_standard_wav('/Users/quangbd/Desktop/negative',
-    #                      '/Users/quangbd/Documents/data/kws/test/negative')
+    convert_standard_wav('/Users/quangbd/Desktop/tmp3',
+                         '/Users/quangbd/Desktop/tmp3_split', seconds=1)
     # download_firebase(['2021-01-07', '2021-01-08', '2021-01-09', '2021-01-10'], '/Users/quangbd/Desktop/heyvf_20210110')
     # segment_to_wavs('/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/wavs',
     #                 '/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/splits',
     #                 '/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/segments20210110')
-    convert_standard_wav('/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/tmp',
-                         '/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/tmp_split',
-                         seconds=1)
+    # convert_standard_wav('/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/tmp',
+    #                      '/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/tmp_split',
+    #                      seconds=1)

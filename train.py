@@ -1,6 +1,4 @@
-import os
 import wandb
-import numpy as np
 from utils import *
 from tqdm import tqdm
 from constant import *
@@ -48,7 +46,7 @@ def main(_):
                 'loss_method': args.loss_method,
                 'batch_size': args.batch_size}
     w_config.update(audio_loader.total_sample_count)
-    wandb.init(project='kws', name=args.name, config=w_config)
+    wandb.init(project='kws-training', name=args.name, config=w_config)
 
     # init graph
     logits, dropout_prob = model.forward(fingerprint_input, args.model_size_info)
@@ -92,6 +90,10 @@ def main(_):
 
     # Save graph.pbtxt.
     tf.io.write_graph(sess.graph_def, args.train_dir, '{}.pbtxt'.format(args.model_architecture))
+
+    # init checkpoint
+    # saver.save(sess, args.init_checkpoint)
+    model.load_variables_from_checkpoint(sess, args.init_checkpoint)
 
     # training loop
     step = 0
@@ -160,7 +162,7 @@ def main(_):
                     else:
                         total_conf_matrix += val_matrix
                 print('Confusion matrix: \n %s' % total_conf_matrix)
-                val_negative_acc, val_positive_acc = micro_accuracy(train_matrix)
+                val_negative_acc, val_positive_acc = micro_accuracy(total_conf_matrix)
                 wandb.log({'val_acc': total_accuracy, 'val_negative_acc': val_negative_acc,
                            'val_positive_acc': val_positive_acc})
                 print('Step {}: val accuracy {}, negative acc {} - positive acc {}'
@@ -168,11 +170,12 @@ def main(_):
 
                 # Save the model checkpoint when validation accuracy improves
                 if total_accuracy >= best_accuracy:
-                    best_micro_accuracy = total_accuracy
+                    best_accuracy = total_accuracy
                     checkpoint_path = os.path.join(
                         args.train_dir, 'best',
-                        '{}_{}.ckpt'.format(args.model_architecture, str(int(best_micro_accuracy * 10000))))
+                        '{}_{}.ckpt'.format(args.model_architecture, str(int(best_accuracy * 10000))))
                     saver.save(sess, checkpoint_path, global_step=step)
+                    wandb.log({'best_val_acc': best_accuracy, 'best_val_step': step})
                     print('Saving best model to {} - step {}'.format(checkpoint_path, step))
                 print('So far the best validation accuracy is %.2f%%' % (best_accuracy * 100))
 

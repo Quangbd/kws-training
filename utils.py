@@ -1,12 +1,24 @@
+import os
+import torch
 import random
 import argparse
+import numpy as np
 from constant import *
 import tensorflow as tf
 from models import select_model
 
 
-def init_session():
+def set_seed():
+    os.environ['PYTHONHASHSEED'] = str(RANDOM_SEED)
+    np.random.seed(RANDOM_SEED)
+    tf.compat.v1.set_random_seed(RANDOM_SEED)
+    tf.random.set_seed(RANDOM_SEED)
     random.seed(RANDOM_SEED)
+    torch.random.manual_seed(RANDOM_SEED)
+
+
+def init_session():
+    set_seed()
     tf.compat.v1.disable_eager_execution()
     sess = tf.compat.v1.InteractiveSession()
     return sess
@@ -116,11 +128,11 @@ def prepare_config():
                         help='How many training loops to run.')
     parser.add_argument('--eval_step_interval',
                         type=int,
-                        default=400,
+                        default=1000,
                         help='How often to evaluate the training results.')
     parser.add_argument('--learning_rate',
                         type=str,
-                        default='0.0001,0.00005,0.00001',
+                        default='0.00005,0.00003,0.00001',
                         help='How large a learning rate to use when training.')
     parser.add_argument('--batch_size',
                         type=int,
@@ -178,13 +190,17 @@ def prepare_config():
                         default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1/'
                                 'training/best/ds_cnn_9734.ckpt-31000',
                         help='Checkpoint to load the weights from.')
+    parser.add_argument('--init_checkpoint',
+                        type=str,
+                        default='/Users/quangbd/Documents/data/model/kws/heyvf/init/ds_cnn1/ds_cnn1',
+                        help='Checkpoint to load the weights from.')
     parser.add_argument('--pb',
                         type=str,
                         default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1.pb',
                         help='Where to save the frozen graph.')
     parser.add_argument('--tflite',
                         type=str,
-                        default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1.tflite',
+                        default='/Users/quangbd/Documents/data/model/kws/heyvf/ds_cnn/ds_cnn1/ds_cnn1.tflite',
                         help='Where to save the frozen graph.')
     # For recorder
     parser.add_argument('--chunk_size',
@@ -203,7 +219,7 @@ def prepare_config():
                         help='Where to save test data.')
     parser.add_argument('--test_model_type',
                         type=str,
-                        default='pb',
+                        default='tflite',
                         help='Model type for test.')
 
     return parser.parse_args()

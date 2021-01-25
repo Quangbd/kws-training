@@ -20,7 +20,6 @@ def run():
     print('Recording')
     audio = np.zeros([desired_samples])
     for i in range(0, int(SAMPLE_RATE / chunk * args.record_time)):
-        start = time.time()
         data = stream.read(chunk)
         sub_audio = np.frombuffer(data, dtype=np.int16) / 32768.
         sub_audio_len = sub_audio.shape[0]
@@ -30,6 +29,7 @@ def run():
         # predict
         input_data = np.array(audio.reshape([desired_samples, 1]), dtype=np.float32)
         interpreter.set_tensor(input_placeholder, input_data)
+        start = time.time()
         interpreter.invoke()
         output_data = interpreter.get_tensor(ouput_placeholder)[0]
 

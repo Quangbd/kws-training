@@ -8,6 +8,9 @@ from tqdm import tqdm
 from constant import *
 import tensorflow as tf
 from tensorflow.python.util import compat
+from utils import set_seed
+
+set_seed()
 
 
 class AudioLoader:
