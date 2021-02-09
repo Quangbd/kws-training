@@ -6,6 +6,7 @@ import random
 import librosa
 import subprocess
 import numpy as np
+from utils import *
 from glob import glob
 from tqdm import tqdm
 from constant import *
@@ -285,16 +286,37 @@ def segment_to_wavs(wav_dir, output_dir, segment_file):
         shutil.copy(os.path.join(wav_dir, filename), os.path.join(bad_dir, filename))
 
 
+def clean_augment_data(wav_dir):
+    print('Load model')
+    args = prepare_config()
+    args.tflite = '/Users/quangbd/Documents/data/model/kws/heyvf/lstm/lstm1/lstm1.tflite'
+    wav_data_placeholder, tf_result, interpreter, desired_samples = load_model(args, ModelType.TFLITE, session=None)
+
+    print('Inference')
+    count = 0
+    for filename in glob(os.path.join(wav_dir, '*.wav')):
+        wav_data = read_file(filename)
+        interpreter.set_tensor(wav_data_placeholder, np.array(wav_data, dtype=np.float32))
+        interpreter.invoke()
+        result = interpreter.get_tensor(tf_result)[0]
+        if result[0] > result[1]:
+            count += 1
+            print(filename, result)
+    print('Count:', count)
+
+
 if __name__ == '__main__':
     # split_folder('/home/ubuntu/new_kws/kws_data/raw/vocal_vn',
     #              '/home/ubuntu/new_kws/kws_data/train/vocal_vn',
     #              name='vocal_vn')
-    convert_standard_wav('/Users/quangbd/Desktop/tmp3',
-                         '/Users/quangbd/Desktop/tmp3_split', seconds=1)
-    # download_firebase(['2021-01-07', '2021-01-08', '2021-01-09', '2021-01-10'], '/Users/quangbd/Desktop/heyvf_20210110')
+    # convert_standard_wav('/Users/quangbd/Desktop/tmp3',
+    #                      '/Users/quangbd/Desktop/tmp3_split', seconds=1)
+    # download_firebase(['2021-01-07', '2021-01-08', '2021-01-09', '2021-01-10'],
+    #                   '/Users/quangbd/Desktop/heyvf_20210110')
     # segment_to_wavs('/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/wavs',
     #                 '/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/splits',
     #                 '/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/segments20210110')
     # convert_standard_wav('/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/tmp',
     #                      '/Users/quangbd/Documents/data/kws/vin_collect/heyvf_20210110/tmp_split',
     #                      seconds=1)
+    clean_augment_data('/Users/quangbd/Documents/data/kws/train/augment_positive')

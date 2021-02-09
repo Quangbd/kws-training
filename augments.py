@@ -132,7 +132,7 @@ def process_file(file_path, output_dir, background_noise=None, file_name=None, m
     return output_path
 
 
-def augment_positive(limit=20_000):
+def augment_positive(limit=30_000):
     count = 0
     while True:
         for file in glob('/Users/quangbd/Documents/data/kws/train/positive/*/*.wav'):

@@ -44,4 +44,7 @@ def run():
 
 if __name__ == '__main__':
     args = prepare_config()
+    args.model_architecture = 'lstm'
+    args.model_size_info = [98, 144]
+    args.tflite = '/Users/quangbd/Documents/data/model/kws/heyvf/lstm/lstm1/lstm1.tflite'
     run()
