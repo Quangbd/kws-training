@@ -54,10 +54,11 @@ class AudioLoader:
         all_words = {}
 
         # Look through all the sub folders to find audio samples
-        all_wav_paths = tf.io.gfile.glob(os.path.join(self.data_dir, '*', '*.wav')) + tf.io.gfile.glob(
-            os.path.join(self.data_dir, '{}/*/*.wav'.format(POSITIVE_LABEL)))
+        all_wav_paths = tf.io.gfile.glob(os.path.join(self.data_dir, '*', '*.wav')) \
+                        + tf.io.gfile.glob(os.path.join(self.data_dir, '{}/*/*.wav'.format(POSITIVE_LABEL))) \
+                        + tf.io.gfile.glob(os.path.join(self.data_dir, '{}/*/*.wav'.format(VOCAL_WORD_LABEL)))
         for wav_path in tqdm(all_wav_paths):
-            if POSITIVE_LABEL in wav_path and AUGMENT_POSITIVE_LABEL not in wav_path:
+            if (POSITIVE_LABEL in wav_path and AUGMENT_POSITIVE_LABEL not in wav_path) or VOCAL_WORD_LABEL in wav_path:
                 word = os.path.dirname(wav_path).split('/')[-2]
             else:
                 _, word = os.path.split(os.path.dirname(wav_path))
